@@ -4,6 +4,31 @@
  * Cada componente es independiente y consume únicamente tokens.css.
  */
 
+/* ============ APP SIDEBAR TOGGLE (mobile) ============ */
+.sidebar-toggle {
+  display: none;
+  position: fixed;
+  top: var(--space-3); left: var(--space-3);
+  z-index: 1200;
+  width: 44px; height: 44px;
+  align-items: center; justify-content: center;
+  font-size: var(--fs-xl);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+@media (max-width: 1023px) {
+  .sidebar-toggle { display: flex; }
+}
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(43, 24, 16, 0.5);
+  z-index: 999;
+}
+.sidebar-backdrop.is-open { display: block; }
+
 /* ============ LAYOUT SHELL ============ */
 .app-shell {
   display: grid;
