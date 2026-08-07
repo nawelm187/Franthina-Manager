@@ -1,0 +1,11 @@
+{
+  "name": "franthina-manager-tests",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node integration/integration.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}
