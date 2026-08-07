@@ -54,6 +54,8 @@
     transform: translateX(-100%);
     transition: transform var(--transition-normal);
     box-shadow: var(--shadow-lg);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .app-sidebar.is-open { transform: translateX(0); }
 }
@@ -62,6 +64,9 @@
   padding: var(--space-6);
   max-width: 1200px;
   width: 100%;
+}
+@media (max-width: 480px) {
+  .app-main { padding: var(--space-4); }
 }
 
 .app-brand {
@@ -241,6 +246,21 @@
   .table--responsive td::before { content: attr(data-label); font-weight: var(--fw-semibold); color: var(--text-secondary); }
 }
 
+/* Filas de ítem (producto/ingrediente + cantidad + precio) dentro de los
+   formularios de Ventas, Pedidos, Compras y Recetas: en pantallas chicas cada
+   campo pasa a ocupar todo el ancho en vez de comprimirse en una sola línea
+   ilegible. El botón de quitar queda a la derecha, en su propia línea. */
+@media (max-width: 640px) {
+  [data-item-row] > select,
+  [data-item-row] > input,
+  [data-item-row] > span[data-subtotal-display] {
+    flex-basis: 100%;
+  }
+  [data-item-row] > [data-remove-item] {
+    margin-left: auto;
+  }
+}
+
 /* ============ MODAL ============ */
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(43, 24, 16, 0.5);
@@ -253,6 +273,10 @@
   max-height: 90vh; overflow-y: auto; padding: var(--space-6);
   z-index: var(--z-modal);
 }
+@media (max-width: 480px) {
+  .modal-backdrop { padding: var(--space-2); }
+  .modal { padding: var(--space-4); }
+}
 .modal__header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-4); }
 .modal__footer { display: flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-5); }
 
@@ -261,6 +285,9 @@
   position: fixed; bottom: var(--space-5); right: var(--space-5);
   display: flex; flex-direction: column; gap: var(--space-2);
   z-index: var(--z-toast); max-width: 360px;
+}
+@media (max-width: 480px) {
+  .toast-region { left: var(--space-3); right: var(--space-3); bottom: var(--space-3); max-width: none; }
 }
 .toast {
   display: flex; align-items: center; gap: var(--space-3);
@@ -275,12 +302,20 @@
 @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ============ TABS ============ */
-.tabs { display: flex; gap: var(--space-2); border-bottom: var(--border-width-strong) solid var(--surface-border); margin-bottom: var(--space-5); }
+.tabs {
+  display: flex; gap: var(--space-2);
+  border-bottom: var(--border-width-strong) solid var(--surface-border);
+  margin-bottom: var(--space-5);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .tab-btn {
   min-height: var(--hit-target-min);
   padding: var(--space-2) var(--space-4);
   background: none; border: none; border-bottom: 3px solid transparent;
   color: var(--text-secondary); font-weight: var(--fw-semibold); cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .tab-btn.is-active { color: var(--color-chocolate); border-color: var(--color-caramel); }
 
@@ -290,6 +325,6 @@
 
 /* ============ UTILIDADES DE LAYOUT ============ */
 .stack { display: flex; flex-direction: column; }
-.row { display: flex; align-items: center; }
+.row { display: flex; align-items: center; flex-wrap: wrap; }
 .gap-2 { gap: var(--space-2); } .gap-3 { gap: var(--space-3); } .gap-4 { gap: var(--space-4); }
 .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-4); }
