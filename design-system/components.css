@@ -20,6 +20,7 @@
 @media (max-width: 1023px) {
   .sidebar-toggle { display: flex; }
 }
+.sidebar-toggle.is-hidden { display: none; }
 
 .sidebar-backdrop {
   display: none;
@@ -65,8 +66,12 @@
   max-width: 1200px;
   width: 100%;
 }
+@media (max-width: 1023px) {
+  /* Deja lugar para que el botón ☰ (fixed, arriba a la izquierda) no tape el título. */
+  .app-main { padding-top: calc(44px + var(--space-3) * 2); }
+}
 @media (max-width: 480px) {
-  .app-main { padding: var(--space-4); }
+  .app-main { padding: var(--space-4); padding-top: calc(44px + var(--space-3) * 2); }
 }
 
 .app-brand {
