@@ -1,5 +1,18 @@
 # Changelog
 
+## [Sin versionar] — Fix: botón ☰ tapaba el título y el logo
+El botón hamburguesa (`position: fixed`, arriba a la izquierda) quedaba
+flotando encima del contenido en vez de dejarle lugar: tapaba el `<h1>` de
+cada sección cuando el menú estaba cerrado, y tapaba el logo/nombre de la
+app cuando el menú estaba abierto.
+
+### Cambiado
+- `.app-main` ahora reserva espacio arriba (`padding-top`) en pantallas
+  chicas para que el título de cada sección no quede debajo del botón ☰.
+- El botón ☰ ahora se oculta mientras el menú está abierto (`app.js`,
+  `setupSidebarToggle`) en vez de quedar superpuesto al logo; el menú se
+  sigue pudiendo cerrar tocando afuera o eligiendo una sección.
+
 ## [Sin versionar] — Pase de responsividad mobile en toda la app
 Los fixes anteriores (menú y scroll del sidebar) resolvían la navegación,
 pero el resto de la interfaz seguía teniendo varios puntos que se rompían o

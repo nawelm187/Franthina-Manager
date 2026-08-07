@@ -67,7 +67,9 @@ function interceptInternalLinks(router) {
 function closeSidebar() {
   document.getElementById('app-sidebar')?.classList.remove('is-open');
   document.getElementById('sidebar-backdrop')?.classList.remove('is-open');
-  document.getElementById('sidebar-toggle')?.setAttribute('aria-expanded', 'false');
+  const toggle = document.getElementById('sidebar-toggle');
+  toggle?.setAttribute('aria-expanded', 'false');
+  toggle?.classList.remove('is-hidden');
 }
 
 function setupSidebarToggle() {
@@ -78,6 +80,9 @@ function setupSidebarToggle() {
     const isOpen = sidebar.classList.toggle('is-open');
     backdrop.classList.toggle('is-open', isOpen);
     toggle.setAttribute('aria-expanded', String(isOpen));
+    // El botón se esconde mientras el menú está abierto para no tapar el logo;
+    // el menú se puede cerrar tocando afuera (backdrop) o eligiendo una sección.
+    toggle.classList.toggle('is-hidden', isOpen);
   });
   backdrop?.addEventListener('click', closeSidebar);
 }
