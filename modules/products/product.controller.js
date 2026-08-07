@@ -1,0 +1,207 @@
+/**
+ * product.controller.js
+ * Responsabilidad: coordinar la Vista (renderer), el Service, eventos y validaciones
+ * del módulo Productos. Es el único archivo del módulo que conoce tanto al Service
+ * como al Renderer.
+ */
+
+import { productService } from './product.service.js';
+import { renderProductsPage, productFormHtml } from './product.renderer.js';
+import { createEmptyProduct } from './product.model.js';
+import { openModal } from '../../components/modal.js';
+import { confirmAction } from '../../components/confirm.js';
+import { showToast } from '../../components/toast.js';
+import { sortRows, bindTableSorting } from '../../components/dataTable.js';
+import { handleError, ValidationError } from '../../core/errors.js';
+import { debounce, formatCurrency, normalizeForSearch } from '../../core/utils.js';
+
+let sortState = { key: null, direction: 'asc' };
+
+/** @param {object} params @param {HTMLElement} container */
+export async function render(_params, container) {
+  container.innerHTML = '<div class="state-panel"><div class="skeleton" style="width:100%;height:240px;"></div></div>';
+
+  let allProducts = [];
+  let recipes = [];
+  try {
+    [allProducts, recipes] = await Promise.all([
+      productService.list(),
+      productService.listRecipesForForm(),
+    ]);
+  } catch (err) {
+    handleError(err, 'products:list');
+  }
+
+  paint(container, allProducts, recipes, allProducts);
+}
+
+/**
+ * @param {HTMLElement} container
+ * @param {object[]} displayedProducts - lo que se muestra en la tabla (puede estar filtrado por búsqueda)
+ * @param {object[]} recipes
+ * @param {object[]} allProducts - la lista completa, SIN filtrar — se usa para la detección de
+ *   duplicados al crear/editar, para que no dependa de qué haya quedado visible tras una búsqueda
+ */
+function paint(container, displayedProducts, recipes, allProducts) {
+  const recipesById = new Map(recipes.map((r) => [r.id, r]));
+  // El margen es un valor derivado (no existe como campo en el registro guardado) —
+  // se calcula ACÁ, antes de ordenar, para que ordenar por "Margen" funcione
+  // sobre el valor real y no sobre un campo inexistente en el dato crudo.
+  const withMargin = displayedProducts.map((p) => ({ ...p, marginPct: productService.margin(p) }));
+  const sortedProducts = sortState.key ? sortRows(withMargin, sortState.key, sortState.direction) : withMargin;
+  renderProductsPage(container, { products: sortedProducts, recipesById, sortState });
+  bindEvents(container, displayedProducts, recipes, allProducts);
+  bindTableSorting(container, {
+    currentSort: sortState,
+    onSort: (key, direction) => {
+      sortState = { key, direction };
+      paint(container, displayedProducts, recipes, allProducts);
+    },
+  });
+}
+
+/**
+ * Busca un producto existente con el mismo nombre, ignorando mayúsculas y
+ * acentos. Excluye `excludeId` para permitir editar sin auto-detectarse.
+ * Función pura, extraída para poder probarla sin simular un click en el DOM.
+ * @param {object[]} products @param {string} name @param {string|null} [excludeId]
+ */
+export function findDuplicateProductName(products, name, excludeId = null) {
+  const target = normalizeForSearch(name);
+  return products.find((p) => p.id !== excludeId && normalizeForSearch(p.name) === target) ?? null;
+}
+
+function bindEvents(container, currentProducts, recipes, allProducts) {
+  container.querySelector('#btn-new-product')
+    ?.addEventListener('click', () => openProductForm(container, null, recipes, allProducts));
+
+  container.querySelector('#product-search')
+    ?.addEventListener('input', debounce((e) => {
+      const term = normalizeForSearch(e.target.value.trim());
+      const filtered = allProducts.filter((p) => normalizeForSearch(p.name).includes(term));
+      paint(container, filtered, recipes, allProducts);
+    }, 250));
+
+  container.querySelectorAll('[data-action="edit"]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const product = currentProducts.find((p) => p.id === btn.dataset.id);
+      openProductForm(container, product, recipes, allProducts);
+    });
+  });
+
+  container.querySelectorAll('[data-action="delete"]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const product = currentProducts.find((p) => p.id === btn.dataset.id);
+      const confirmed = await confirmAction({
+        title: 'Eliminar producto',
+        message: `¿Seguro que querés eliminar "${product.name}"? Esta acción no se puede deshacer.`,
+        confirmLabel: 'Eliminar',
+        danger: true,
+      });
+      if (!confirmed) return;
+      try {
+        await productService.remove(product.id);
+        showToast({ type: 'success', message: `"${product.name}" fue eliminado.` });
+        render(null, container);
+      } catch (err) {
+        handleError(err, 'products:delete');
+      }
+    });
+  });
+}
+
+function openProductForm(container, product, recipes, allProducts) {
+  const isEdit = Boolean(product);
+  const data = product ? { ...product } : createEmptyProduct();
+
+  openModal({
+    title: isEdit ? 'Editar producto' : 'Nuevo producto',
+    contentHtml: productFormHtml(data, recipes),
+    onMount: (modalEl) => setupRecipeSync(modalEl, isEdit ? product.id : null),
+    footerButtons: [
+      { label: 'Cancelar', variant: 'secondary', onClick: (closeFn) => closeFn() },
+      {
+        label: isEdit ? 'Guardar cambios' : 'Crear producto',
+        variant: 'primary',
+        onClick: async (closeFn) => {
+          const form = document.getElementById('product-form');
+          const formData = new FormData(form);
+          const payload = {
+            name: formData.get('name')?.toString().trim() ?? '',
+            category: formData.get('category')?.toString().trim() || 'General',
+            recipeId: formData.get('recipeId')?.toString() || null,
+            costPrice: Number(formData.get('costPrice')) || 0,
+            sellPrice: Number(formData.get('sellPrice')) || 0,
+            stock: Number(formData.get('stock')) || 0,
+            active: formData.get('active') === 'on',
+            notes: formData.get('notes')?.toString() ?? '',
+          };
+
+          const duplicate = findDuplicateProductName(allProducts, payload.name, isEdit ? product.id : null);
+          if (duplicate) {
+            paintFieldErrors({ name: `Ya existe un producto llamado "${duplicate.name}". Usá ese en vez de crear uno nuevo, o elegí otro nombre.` });
+            return;
+          }
+
+          try {
+            if (isEdit) {
+              await productService.update(product.id, payload);
+              showToast({ type: 'success', message: `"${payload.name}" fue actualizado.` });
+            } else {
+              await productService.create(payload);
+              showToast({ type: 'success', message: `"${payload.name}" fue creado.` });
+            }
+            closeFn();
+            render(null, container);
+          } catch (err) {
+            if (err instanceof ValidationError) {
+              paintFieldErrors(err.fieldErrors);
+            } else {
+              handleError(err, 'products:save');
+              closeFn();
+            }
+          }
+        },
+      },
+    ],
+  });
+}
+
+/**
+ * Conecta el selector de receta con el botón de sincronizar costo: se
+ * habilita/deshabilita según haya o no una receta elegida, y al presionarlo
+ * llama al Service (nunca calcula el costo acá — eso es lógica de negocio).
+ */
+function setupRecipeSync(modalEl, existingProductId) {
+  const recipeSelect = modalEl.querySelector('#f-recipe');
+  const syncBtn = modalEl.querySelector('#btn-sync-recipe-cost');
+  const costInput = modalEl.querySelector('#f-cost');
+
+  recipeSelect?.addEventListener('change', () => {
+    syncBtn.disabled = !recipeSelect.value;
+  });
+
+  syncBtn?.addEventListener('click', async () => {
+    if (!existingProductId) {
+      showToast({ type: 'warning', message: 'Guardá el producto primero para poder sincronizar el costo con la receta.' });
+      return;
+    }
+    try {
+      const { costPerUnit } = await productService.syncCostFromRecipe(existingProductId);
+      costInput.value = costPerUnit.toFixed(2);
+      showToast({ type: 'success', message: `Costo actualizado a ${formatCurrency(costPerUnit)} según la receta.` });
+    } catch (err) {
+      handleError(err, 'products:sync-recipe-cost');
+    }
+  });
+}
+
+function paintFieldErrors(fieldErrors) {
+  document.querySelectorAll('[data-error-for]').forEach((el) => { el.hidden = true; el.textContent = ''; });
+  Object.entries(fieldErrors).forEach(([field, message]) => {
+    const el = document.querySelector(`[data-error-for="${field}"]`);
+    const input = document.getElementById(`f-${field === 'costPrice' ? 'cost' : field === 'sellPrice' ? 'sell' : field}`);
+    if (el) { el.hidden = false; el.textContent = `⚠ ${message}`; }
+    input?.closest('.field')?.classList.add('has-error');
+  });
+}
