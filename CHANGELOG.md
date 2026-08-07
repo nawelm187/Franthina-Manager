@@ -1,5 +1,49 @@
 # Changelog
 
+## [Sin versionar] — Pase de responsividad mobile en toda la app
+Los fixes anteriores (menú y scroll del sidebar) resolvían la navegación,
+pero el resto de la interfaz seguía teniendo varios puntos que se rompían o
+se veían apretados en pantallas chicas. Este es un barrido general.
+
+### Cambiado (design-system/components.css — afecta a todos los módulos)
+- `.row` ahora envuelve (`flex-wrap: wrap`) por defecto. Esta única clase
+  utilitaria se usa en decenas de lugares (headers, pares de campos,
+  filas de ítem de Ventas/Pedidos/Compras/Recetas, listas de reportes), así
+  que el cambio arregla de una sola vez todos los layouts que antes se
+  comprimían en una sola línea ilegible en mobile.
+- Filas de ítem (`[data-item-row]`, usadas en Ventas, Pedidos, Compras y
+  Recetas: producto/ingrediente + cantidad + precio) apilan cada campo a
+  ancho completo debajo de los 640px, en vez de aplastarse los 3-4 juntos.
+- `.tabs` (usado en Reportes) ahora scrollea horizontalmente en vez de
+  desbordar la pantalla cuando no entran las 6 pestañas.
+- `.app-main`, `.modal`/`.modal-backdrop` y `.toast-region` reducen su
+  padding/posición bajo los 480px para aprovechar mejor el ancho disponible
+  en celulares chicos (320-375px).
+
+## [Sin versionar] — Fix: menú de navegación inaccesible en celular
+El botón hamburguesa (`#sidebar-toggle`) existía en el HTML pero nunca se
+mostraba en pantallas chicas ni tenía lógica para abrir el menú: quedaba con
+`display:none` fijo y sin listener de click, dejando el sidebar (que en mobile
+se esconde fuera de pantalla) completamente inalcanzable. Bug preexistente,
+no introducido por los cambios de GitHub Pages.
+
+### Agregado
+- `.sidebar-backdrop` en `design-system/components.css`: fondo oscuro que
+  aparece detrás del menú en mobile y permite cerrarlo tocando afuera.
+- `setupSidebarToggle()` en `app.js`: abre/cierra el sidebar al tocar el
+  botón hamburguesa y sincroniza `aria-expanded` para accesibilidad.
+
+### Cambiado
+- El botón hamburguesa ahora se controla por CSS (`.sidebar-toggle`, visible
+  solo bajo 1023px) en vez de un `style="display:none"` inline sin forma de
+  revertirse.
+- El cierre del menú al navegar (`interceptInternalLinks`) ahora también
+  oculta el backdrop y actualiza `aria-expanded` (antes solo quitaba
+  `is-open` del sidebar).
+- `.app-sidebar` en mobile (`position: fixed`) ahora tiene `overflow-y: auto`:
+  antes, con más de ~9 secciones en el menú, las últimas quedaban cortadas
+  fuera del viewport y no había forma de scrollear para tocarlas.
+
 ## [Sin versionar] — Compatibilidad con GitHub Pages
 ### Agregado
 - `core/basePath.js`: resuelve rutas lógicas de la app contra el subdirectorio
