@@ -21,7 +21,8 @@ function buildShell() {
   document.body.innerHTML = `
     <a class="skip-link" href="#main-content">Saltar al contenido principal</a>
     <div class="app-shell">
-      <button class="btn btn--ghost" id="sidebar-toggle" style="display:none; position:fixed; top:var(--space-3); left:var(--space-3); z-index:1200;" aria-label="Abrir menú">☰</button>
+      <button class="btn btn--ghost sidebar-toggle" id="sidebar-toggle" aria-label="Abrir menú" aria-expanded="false">☰</button>
+      <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
       <nav class="app-sidebar" id="app-sidebar" aria-label="Navegación principal">
         <a class="app-brand" href="${withBase(ROUTES.DASHBOARD)}" data-link aria-label="Ir al panel principal">
           <img src="assets/icons/logo-sidebar.png" alt="" class="app-brand__logo" width="40" height="40" />
@@ -59,8 +60,26 @@ function interceptInternalLinks(router) {
     if (!link) return;
     e.preventDefault();
     router.navigate(link.getAttribute('href'));
-    document.getElementById('app-sidebar')?.classList.remove('is-open');
+    closeSidebar();
   });
+}
+
+function closeSidebar() {
+  document.getElementById('app-sidebar')?.classList.remove('is-open');
+  document.getElementById('sidebar-backdrop')?.classList.remove('is-open');
+  document.getElementById('sidebar-toggle')?.setAttribute('aria-expanded', 'false');
+}
+
+function setupSidebarToggle() {
+  const toggle = document.getElementById('sidebar-toggle');
+  const sidebar = document.getElementById('app-sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  toggle?.addEventListener('click', () => {
+    const isOpen = sidebar.classList.toggle('is-open');
+    backdrop.classList.toggle('is-open', isOpen);
+    toggle.setAttribute('aria-expanded', String(isOpen));
+  });
+  backdrop?.addEventListener('click', closeSidebar);
 }
 
 async function init() {
@@ -96,6 +115,7 @@ async function init() {
   eventBus.on(EVENTS.ROUTE_CHANGED, highlightActiveNav);
 
   interceptInternalLinks(router);
+  setupSidebarToggle();
   router.start();
 
   if ('serviceWorker' in navigator) {
