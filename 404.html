@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Franthina Manager</title>
+  <script type="text/javascript">
+    // GitHub Pages no soporta reescritura de rutas del lado del servidor.
+    // Como Franthina Manager es una SPA con router propio (core/router.js),
+    // entrar directamente (o refrescar) a una ruta interna como "/productos"
+    // hace que GitHub Pages devuelva este archivo 404.html en vez de index.html.
+    //
+    // Acá redirigimos a index.html (ubicado en la misma carpeta que este
+    // archivo) guardando la ruta original en la query string. index.html
+    // la decodifica y restaura la URL real con history.replaceState antes
+    // de que arranque el router. Referencia: https://github.com/rafgraph/spa-github-pages
+    //
+    // Nota: esto asume rutas de un solo nivel (ej. "/productos"), que es lo
+    // que usa la app hoy. Si en el futuro se agregan rutas anidadas (ej.
+    // "/productos/:id"), este archivo debe actualizarse para subir tantos
+    // niveles como corresponda antes de llegar a "index.html".
+    var l = window.location;
+    l.replace(
+      'index.html?redirect=' + encodeURIComponent(l.pathname + l.search + l.hash)
+    );
+  </script>
+</head>
+<body>
+</body>
+</html>

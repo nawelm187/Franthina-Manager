@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Franthina Manager</title>
+  <meta name="description" content="Sistema de administración para pastelería artesanal Franthina." />
+  <meta name="theme-color" content="#7D2142" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="assets/icons/icon-192.png" />
+
+  <!-- Tipografía de marca Franthina: Fredoka (títulos), Nunito (cuerpo), Mrs Saint Delafield (logotipo) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Mrs+Saint+Delafield&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Design System: el orden importa — tokens primero, luego base, luego componentes -->
+  <link rel="stylesheet" href="design-system/tokens.css" />
+  <link rel="stylesheet" href="design-system/base.css" />
+  <link rel="stylesheet" href="design-system/components.css" />
+</head>
+<body>
+  <script type="text/javascript">
+    // Contraparte del truco en 404.html: si llegamos acá con ?redirect=...,
+    // restauramos la URL real ANTES de que arranque el router (core/router.js),
+    // para que la app cargue la ruta que el usuario pidió originalmente.
+    (function () {
+      var redirect = new URLSearchParams(window.location.search).get('redirect');
+      if (redirect) {
+        history.replaceState(null, '', redirect);
+      }
+    })();
+  </script>
+  <!-- app.js construye todo el contenido dinámicamente dentro de <body> -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
