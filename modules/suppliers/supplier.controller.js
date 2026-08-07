@@ -1,0 +1,136 @@
+/**
+ * supplier.controller.js
+ * Responsabilidad: coordinar Service + Renderer + eventos del DOM del módulo Proveedores.
+ */
+
+import { supplierService } from './supplier.service.js';
+import { renderSuppliersPage, supplierFormHtml } from './supplier.renderer.js';
+import { createEmptySupplier } from './supplier.model.js';
+import { openModal } from '../../components/modal.js';
+import { confirmAction } from '../../components/confirm.js';
+import { showToast } from '../../components/toast.js';
+import { sortRows, bindTableSorting } from '../../components/dataTable.js';
+import { handleError, ValidationError } from '../../core/errors.js';
+import { debounce, normalizeForSearch } from '../../core/utils.js';
+
+let sortState = { key: null, direction: 'asc' };
+
+export async function render(_params, container) {
+  container.innerHTML = '<div class="state-panel"><div class="skeleton" style="width:100%;height:240px;"></div></div>';
+
+  let allSuppliers = [];
+  try {
+    allSuppliers = await supplierService.list();
+  } catch (err) {
+    handleError(err, 'suppliers:list');
+  }
+  paint(container, allSuppliers, allSuppliers);
+}
+
+function paint(container, displayedSuppliers, allSuppliers) {
+  const sorted = sortState.key ? sortRows(displayedSuppliers, sortState.key, sortState.direction) : displayedSuppliers;
+  renderSuppliersPage(container, { suppliers: sorted, sortState });
+  bindEvents(container, displayedSuppliers, allSuppliers);
+  bindTableSorting(container, {
+    currentSort: sortState,
+    onSort: (key, direction) => {
+      sortState = { key, direction };
+      paint(container, displayedSuppliers, allSuppliers);
+    },
+  });
+}
+
+function bindEvents(container, suppliers, allSuppliers) {
+  container.querySelector('#btn-new-supplier')
+    ?.addEventListener('click', () => openSupplierForm(container, null));
+
+  container.querySelector('#supplier-search')
+    ?.addEventListener('input', debounce((e) => {
+      const term = normalizeForSearch(e.target.value.trim());
+      const filtered = allSuppliers.filter((s) => normalizeForSearch(s.name).includes(term));
+      paint(container, filtered, allSuppliers);
+    }, 250));
+
+  container.querySelectorAll('[data-action="edit"]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const supplier = suppliers.find((s) => s.id === btn.dataset.id);
+      openSupplierForm(container, supplier);
+    });
+  });
+
+  container.querySelectorAll('[data-action="delete"]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const supplier = suppliers.find((s) => s.id === btn.dataset.id);
+      const confirmed = await confirmAction({
+        title: 'Eliminar proveedor',
+        message: `¿Seguro que querés eliminar a "${supplier.name}"? Esta acción no se puede deshacer.`,
+        confirmLabel: 'Eliminar',
+        danger: true,
+      });
+      if (!confirmed) return;
+      try {
+        await supplierService.remove(supplier.id);
+        showToast({ type: 'success', message: `"${supplier.name}" fue eliminado.` });
+        render(null, container);
+      } catch (err) {
+        handleError(err, 'suppliers:delete');
+      }
+    });
+  });
+}
+
+function openSupplierForm(container, supplier) {
+  const isEdit = Boolean(supplier);
+  const data = supplier ? { ...supplier } : createEmptySupplier();
+
+  openModal({
+    title: isEdit ? 'Editar proveedor' : 'Nuevo proveedor',
+    contentHtml: supplierFormHtml(data),
+    footerButtons: [
+      { label: 'Cancelar', variant: 'secondary', onClick: (closeFn) => closeFn() },
+      {
+        label: isEdit ? 'Guardar cambios' : 'Crear proveedor',
+        variant: 'primary',
+        onClick: async (closeFn) => {
+          const form = document.getElementById('supplier-form');
+          const formData = new FormData(form);
+          const payload = {
+            name: formData.get('name')?.toString().trim() ?? '',
+            contactName: formData.get('contactName')?.toString().trim() ?? '',
+            phone: formData.get('phone')?.toString().trim() ?? '',
+            email: formData.get('email')?.toString().trim() ?? '',
+            leadTimeDays: Number(formData.get('leadTimeDays')) || 0,
+            notes: formData.get('notes')?.toString() ?? '',
+          };
+
+          try {
+            if (isEdit) {
+              await supplierService.update(supplier.id, payload);
+              showToast({ type: 'success', message: `"${payload.name}" fue actualizado.` });
+            } else {
+              await supplierService.create(payload);
+              showToast({ type: 'success', message: `"${payload.name}" fue creado.` });
+            }
+            closeFn();
+            render(null, container);
+          } catch (err) {
+            if (err instanceof ValidationError) {
+              paintFieldErrors(err.fieldErrors);
+            } else {
+              handleError(err, 'suppliers:save');
+              closeFn();
+            }
+          }
+        },
+      },
+    ],
+  });
+}
+
+function paintFieldErrors(fieldErrors) {
+  document.querySelectorAll('[data-error-for]').forEach((el) => { el.hidden = true; el.textContent = ''; });
+  Object.entries(fieldErrors).forEach(([field, message]) => {
+    const el = document.querySelector(`[data-error-for="${field}"]`);
+    if (el) { el.hidden = false; el.textContent = `⚠ ${message}`; }
+  });
+}
