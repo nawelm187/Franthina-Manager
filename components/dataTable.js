@@ -40,7 +40,11 @@ export function renderDataTable({ columns, rows, emptyMessage = 'No hay datos pa
     if (!col.sortable) return `<th scope="col">${escapeHtml(col.label)}</th>`;
     const isActive = col.key === sortKey;
     const arrow = isActive ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : '';
-    return `<th scope="col"><button type="button" class="table-sort-btn" data-sort-key="${col.key}" aria-label="Ordenar por ${escapeHtml(col.label)}">${escapeHtml(col.label)}${arrow}</button></th>`;
+    const ariaSort = isActive ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none';
+    const ariaLabel = isActive
+      ? `Ordenado por ${escapeHtml(col.label)}, ${sortDirection === 'asc' ? 'ascendente' : 'descendente'}. Activar para invertir el orden.`
+      : `Ordenar por ${escapeHtml(col.label)}`;
+    return `<th scope="col" aria-sort="${ariaSort}"><button type="button" class="table-sort-btn" data-sort-key="${col.key}" aria-label="${ariaLabel}">${escapeHtml(col.label)}${arrow}</button></th>`;
   }).join('') + (rowActionsHtml ? '<th scope="col"><span class="sr-only">Acciones</span></th>' : '');
 
   const body = rows.map((row) => {

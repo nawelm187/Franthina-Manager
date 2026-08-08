@@ -51,6 +51,7 @@ export function openModal({ title, contentHtml, onMount, footerButtons = [] }) {
    */
   function onKeydown(e) {
     if (e.key === 'Escape') { close(); return; }
+    if (e.key === 'Tab') { trapFocus(e); return; }
     if (e.key !== 'Enter') return;
     if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') return;
     // Una línea de carrito (Ventas, Recetas, Producción, Compras, Pedidos) nunca
@@ -62,6 +63,29 @@ export function openModal({ title, contentHtml, onMount, footerButtons = [] }) {
     const primaryIndex = footerButtons.findIndex((b) => b.variant === 'primary');
     const targetIndex = primaryIndex !== -1 ? primaryIndex : footerButtons.length - 1;
     if (targetIndex >= 0) modal.querySelector(`[data-btn-index="${targetIndex}"]`)?.click();
+  }
+
+  /**
+   * Mantiene el foco de teclado dentro del modal: con el foco en el primer
+   * elemento, Shift+Tab salta al último (y viceversa con Tab desde el
+   * último), en vez de escaparse hacia elementos de la página de atrás que
+   * quedan ocultos detrás del fondo oscuro pero seguirían siendo alcanzables
+   * por teclado sin esto.
+   */
+  function trapFocus(e) {
+    const focusable = Array.from(
+      modal.querySelectorAll('input, textarea, select, button, a[href], [tabindex]:not([tabindex="-1"])')
+    ).filter((el) => !el.disabled && el.offsetParent !== null);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   }
 
   backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
