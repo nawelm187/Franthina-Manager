@@ -5,12 +5,19 @@ sin frameworks pesados, construida con HTML5 + CSS3 + JavaScript ES2024+.
 
 ## Estado de este entregable
 
-Base arquitectónica completa más **13 módulos funcionales**: Dashboard,
-Productos, Ingredientes, Recetas, Inventario, Producción, Clientes, Ventas,
-Caja, Pedidos, Proveedores, Compras y Reportes (agregación por rango de
-fechas + exportación CSV). Con esto el núcleo comercial completo del brief
-original está cubierto — ver `docs/ROADMAP.md` para lo que queda
-(multiusuario, SaaS, integraciones).
+Base arquitectónica completa más **13 módulos funcionales** de administración
+(Dashboard, Productos, Ingredientes, Recetas, Inventario, Producción,
+Clientes, Ventas, Caja, Pedidos, Proveedores, Compras y Reportes) más, desde
+v0.19, una **tienda pública** con catálogo, carrito y checkout, separada del
+admin: todo el sistema de gestión vive ahora en `/admin`, y `/` es la tienda
+que ve cualquier visitante. Un pedido hecho desde la tienda crea un Pedido
+real, visible en `/admin/pedidos`. Con esto el núcleo comercial completo del
+brief original está cubierto — ver `docs/ROADMAP.md` para lo que queda
+(login/roles reales, multiusuario, SaaS, integraciones).
+
+**Importante**: `/admin` todavía no tiene login — es una URL más, no un área
+protegida. No compartas ese link públicamente hasta que exista autenticación
+real (ver `docs/ROADMAP.md`).
 
 ## Cómo ejecutarlo
 
@@ -44,17 +51,18 @@ Detalles técnicos ya resueltos para que esto funcione:
 - Todas las rutas de la SPA (`core/router.js`, `app.js`) resuelven el
   subdirectorio real de despliegue en tiempo de ejecución a través de
   `core/basePath.js` — no hay que tocar nada a mano.
-- `404.html` redirige a `index.html` preservando la ruta pedida, así que
-  entrar directo o refrescar en una ruta interna (ej. `/productos`) no rompe
-  (GitHub Pages no soporta reescritura de rutas del lado del servidor).
+- `404.html` redirige a `index.html` preservando la ruta pedida (sin importar
+  cuántos niveles tenga, ej. `/admin/productos`), así que entrar directo o
+  refrescar en una ruta interna no rompe (GitHub Pages no soporta
+  reescritura de rutas del lado del servidor).
 - `service-worker.js` y `manifest.json` usan rutas relativas al scope real,
   así el modo offline y el "Agregar a pantalla de inicio" funcionan también
   bajo un subdirectorio.
 - Si publicás en un repo tipo `usuario.github.io` (user/org page, se sirve
-  desde la raíz del dominio), no hace falta cambiar nada: `basePath.js` lo
-  detecta solo. La única excepción es `404.html`, que asume rutas de un solo
-  nivel (todas las rutas actuales lo son); si en el futuro agregás rutas
-  anidadas (ej. `/productos/:id`), revisá el comentario en ese archivo.
+  desde la raíz del dominio) en vez de un project site
+  (`usuario.github.io/nombre-repo/`), hay que ajustar una sola constante:
+  `pathSegmentsToKeep` al principio de `404.html`, de `1` a `0` — el
+  comentario en ese archivo lo explica.
 
 ## Arquitectura en una página
 

@@ -6,22 +6,27 @@
   <title>Franthina Manager</title>
   <script type="text/javascript">
     // GitHub Pages no soporta reescritura de rutas del lado del servidor.
-    // Como Franthina Manager es una SPA con router propio (core/router.js),
-    // entrar directamente (o refrescar) a una ruta interna como "/productos"
-    // hace que GitHub Pages devuelva este archivo 404.html en vez de index.html.
+    // Como esta es una SPA con router propio (core/router.js) y rutas de más
+    // de un nivel (ej. "/admin/productos"), entrar directo o refrescar en una
+    // ruta interna hace que GitHub Pages devuelva este 404.html en vez de
+    // index.html.
     //
-    // Acá redirigimos a index.html (ubicado en la misma carpeta que este
-    // archivo) guardando la ruta original en la query string. index.html
-    // la decodifica y restaura la URL real con history.replaceState antes
-    // de que arranque el router. Referencia: https://github.com/rafgraph/spa-github-pages
+    // Acá redirigimos a index.html (en la raíz del sitio) guardando la ruta
+    // original en la query string; index.html la decodifica y restaura la
+    // URL real con history.replaceState antes de que arranque el router.
+    // Referencia: https://github.com/rafgraph/spa-github-pages
     //
-    // Nota: esto asume rutas de un solo nivel (ej. "/productos"), que es lo
-    // que usa la app hoy. Si en el futuro se agregan rutas anidadas (ej.
-    // "/productos/:id"), este archivo debe actualizarse para subir tantos
-    // niveles como corresponda antes de llegar a "index.html".
+    // pathSegmentsToKeep: cuántos segmentos de la URL son la "base" del sitio
+    // (no rutas de la app), a ajustar UNA vez según cómo se publique:
+    //   - 1 si es un project site: https://usuario.github.io/repo/  (caso más común, y el actual)
+    //   - 0 si es un user/org site: https://usuario.github.io/
+    var pathSegmentsToKeep = 1;
+
     var l = window.location;
+    var base = l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/';
     l.replace(
-      'index.html?redirect=' + encodeURIComponent(l.pathname + l.search + l.hash)
+      l.protocol + '//' + l.host + base + 'index.html?redirect=' +
+      encodeURIComponent(l.pathname + l.search + l.hash)
     );
   </script>
 </head>

@@ -1,5 +1,137 @@
 # Changelog
 
+## [0.19.0] — Tienda pública + separación Tienda / Administración
+Primera versión con una tienda pública de verdad, separada del sistema de
+gestión. Nada del admin existente se tocó ni se eliminó — se movió detrás
+de `/admin` y se le sumó una tienda nueva en `/`.
+
+**Importante sobre seguridad**: esto es una separación de *rutas*, no de
+*permisos*. `/admin` sigue siendo una URL más, sin login — cualquiera que
+la conozca puede entrar. La protección real (login + roles) es una versión
+futura del roadmap; por ahora, no compartas el link de `/admin` públicamente.
+
+### Agregado
+- **Tienda pública** (`modules/store-catalog/`, `modules/store-cart/`):
+  - Catálogo (`/`) con filtro por categoría, mostrando nombre, descripción,
+    foto, precio y disponibilidad de cada producto activo — nunca el costo,
+    el margen, ni el stock exacto (ver `product.model.js`, comentario en
+    `Product.costPrice`/`Product.notes`).
+  - Carrito (`/carrito`), persistido en el propio navegador del visitante
+    (`core/storeCart.js`, no pasa por el sistema de colecciones del admin).
+  - Checkout: al confirmar, busca (por teléfono/email) o crea el Cliente, y
+    crea un Pedido real a través de `orderService` — el mismo Pedido que
+    ya se ve en `/admin/pedidos`, con estado "Pendiente" (no descuenta stock
+    hasta que se marca como entregado desde el admin, igual que un pedido
+    cargado a mano).
+- `modules/products/`: dos campos nuevos, opcionales — `description` (texto
+  para la tienda) e `imageUrl` (link a una foto). El campo `active` ahora
+  también controla si el producto se ve en la tienda pública, además de su
+  uso previo en el admin.
+- `core/config.js`: `ROUTES.STORE_HOME` (`/`) y `ROUTES.STORE_CART`
+  (`/carrito`).
+
+### Cambiado
+- **Todas las rutas del admin ahora viven bajo `/admin`** (antes `/`,
+  `/productos`, etc. — ahora `/admin`, `/admin/productos`, etc.). Un solo
+  cambio en `core/config.js` (`ROUTES`) alcanzó para todo el admin, porque
+  ya estaba centralizado ahí.
+- `app.js`: reestructurado para sostener dos "zonas" (tienda y admin) con
+  un único Router y un único nodo `<main>` que nunca se recrea — evita
+  crear más de una instancia de Router (que acumularía listeners de
+  navegación del navegador) al cruzar entre zonas.
+- `404.html`: ya no asume rutas de un solo nivel — ahora soporta rutas
+  anidadas como `/admin/productos` sin romperse al refrescar la página.
+
+## [Sin versionar] — Pruebas a fondo + modo offline
+Tercera y última etapa de pulido post-v0.18 (Robustez ✓ → Accesibilidad ✓ →
+Pruebas a fondo ✓).
+
+### Corregido
+- **Bug real e importante en el modo offline** (`service-worker.js`): la
+  estrategia era "cache primero, para siempre" — una vez que un archivo
+  (`app.js`, cualquier módulo) quedaba guardado en el caché del navegador,
+  se seguía sirviendo esa misma copia indefinidamente sin volver a chequear
+  el servidor, sin importar cuántas actualizaciones se subieran a GitHub
+  Pages después. Cambiado a **network-first** para todo el código de la app
+  (HTML/JS/CSS/JSON): siempre intenta traer la versión más nueva primero, y
+  solo usa la copia guardada si no hay conexión a internet. Los íconos/
+  imágenes siguen siendo cache-first (cambian poco, no vale la pena pedirlos
+  de nuevo cada vez). También se subió la versión de caché (`v1` → `v2`)
+  para que quienes ya habían visitado el sitio antes limpien la copia vieja
+  una única vez.
+
+### Verificado
+- **Sintaxis**: se revisó cada archivo `.js` del proyecto (no solo los
+  tocados en este pase) — cero errores.
+- **Lógica de negocio real**, con un harness en Node puro que simula
+  `localStorage` (no se pudo correr el test suite oficial de
+  `tests/integration/`: requiere `jsdom`, y este entorno no tiene acceso a
+  internet para instalarlo — si vos podés correrlo desde tu PC con
+  `cd tests && npm install && npm test`, es un chequeo extra que vale la
+  pena hacer):
+  - Cálculo de margen de producto.
+  - Rechazo de producto sin nombre / con precio negativo.
+  - Detección de nombre duplicado (la misma lógica que usa el Controller).
+  - Detección de stock bajo en ingredientes (con y sin alerta).
+  - Cálculo de costo de receta a partir del costo real de sus ingredientes.
+  - Rechazo de cliente sin nombre.
+  - Alta y baja de productos.
+  - Los 12 chequeos pasaron correctamente.
+
+## [Sin versionar] — Accesibilidad: foco atrapado, teclado, errores anunciados
+Segunda de tres etapas de pulido post-v0.18 (Robustez ✓ → Accesibilidad →
+Pruebas a fondo). La base de a11y ya era sólida (skip-link, `:focus-visible`,
+`aria-live` en toasts, headers de tabla ordenables con `<button>` real) —
+se corrigieron 3 gaps concretos.
+
+### Corregido
+- **Los modales no atrapaban el foco de verdad** (`components/modal.js`,
+  afecta a los ~15 formularios y a todos los diálogos de confirmación de la
+  app): con teclado, Tab se escapaba hacia el sidebar y otros elementos
+  ocultos detrás del fondo oscuro. Ahora Tab/Shift+Tab quedan atrapados
+  dentro del modal mientras está abierto.
+- **El menú ☰ en mobile no era navegable por teclado** (`app.js`): al
+  abrirlo no movía el foco adentro, Escape no lo cerraba, y Tab se escapaba
+  igual que en los modales. Ahora: al abrir, el foco va al primer link;
+  Escape cierra y devuelve el foco al botón ☰; Tab queda atrapado dentro del
+  menú mientras está abierto.
+- **Errores de formulario invisibles para lectores de pantalla** (los 11
+  módulos con formularios): el texto de error se mostraba en rojo junto al
+  campo, pero sin `aria-invalid` ni `aria-describedby` — un lector de
+  pantalla no anunciaba nada al llegar a un campo inválido. Ahora cada campo
+  inválido queda correctamente anunciado y asociado a su mensaje de error.
+
+### Agregado
+- `components/dataTable.js`: `aria-sort` en el `<th>` de la columna
+  ordenada, y el `aria-label` del botón de orden ahora indica el estado
+  actual ("Ordenado por Nombre, ascendente...") en vez de un genérico
+  "Ordenar por Nombre" que no reflejaba si ya estaba activo.
+
+## [Sin versionar] — Robustez: errores de guardado, doble-envío en modales
+Primera de tres etapas de pulido post-v0.18 (Robustez → Accesibilidad →
+Pruebas a fondo). Validaciones y confirmaciones ya estaban bien cubiertas en
+todos los módulos — se revisaron y no necesitaron cambios. Se encontraron y
+corrigieron dos gaps reales:
+
+### Agregado
+- `core/errors.js`: nueva clase `StorageError`, con mensaje específico y
+  accionable para cuando el navegador no puede guardar (sin espacio
+  disponible, o bloqueado por una pestaña de incógnito/privada) — antes
+  cualquier fallo de `localStorage.setItem` cascadeaba al mensaje genérico
+  "Ocurrió un problema inesperado", sin decirle al usuario qué hacer.
+- `core/storage/LocalStorageAdapter.js`: si se detectan datos corruptos al
+  leer una colección, ahora se avisa una vez por sesión con un toast (antes
+  se descartaban en silencio y la sección aparecía vacía sin explicación).
+
+### Corregido
+- **Doble-envío en modales** (`components/modal.js`, afecta a los ~15
+  formularios de la app por igual, ya que todos pasan por `openModal`): un
+  doble-tap rápido en "Guardar"/"Confirmar" — común en pantallas táctiles —
+  podía disparar la acción dos veces antes de que la primera terminara,
+  pudiendo crear un registro duplicado (por ejemplo, una venta repetida que
+  descuenta stock dos veces). Ahora los botones del pie del modal se
+  deshabilitan apenas se hace clic, hasta que la acción termina.
+
 ## [Sin versionar] — Fix: la página se veía "cortada" y había que scrollear a la derecha en celular
 Causa real: CSS Grid no permite que un ítem de grid (`.app-main`, dentro de
 `.app-shell`) se achique más allá del contenido más ancho que tenga adentro,
