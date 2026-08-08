@@ -4,7 +4,7 @@
  */
 
 import { supplierService } from './supplier.service.js';
-import { renderSuppliersPage, supplierFormHtml } from './supplier.renderer.js';
+import { renderSuppliersPage, renderSuppliersTable, supplierFormHtml } from './supplier.renderer.js';
 import { createEmptySupplier } from './supplier.model.js';
 import { openModal } from '../../components/modal.js';
 import { confirmAction } from '../../components/confirm.js';
@@ -14,6 +14,7 @@ import { handleError, ValidationError } from '../../core/errors.js';
 import { debounce, normalizeForSearch } from '../../core/utils.js';
 
 let sortState = { key: null, direction: 'asc' };
+let searchTerm = '';
 
 export async function render(_params, container) {
   container.innerHTML = '<div class="state-panel"><div class="skeleton" style="width:100%;height:240px;"></div></div>';
@@ -24,13 +25,32 @@ export async function render(_params, container) {
   } catch (err) {
     handleError(err, 'suppliers:list');
   }
+  searchTerm = '';
   paint(container, allSuppliers, allSuppliers);
 }
 
 function paint(container, displayedSuppliers, allSuppliers) {
   const sorted = sortState.key ? sortRows(displayedSuppliers, sortState.key, sortState.direction) : displayedSuppliers;
-  renderSuppliersPage(container, { suppliers: sorted, sortState });
+  renderSuppliersPage(container, { suppliers: sorted, sortState, searchTerm });
   bindEvents(container, displayedSuppliers, allSuppliers);
+  bindTableSorting(container, {
+    currentSort: sortState,
+    onSort: (key, direction) => {
+      sortState = { key, direction };
+      paint(container, displayedSuppliers, allSuppliers);
+    },
+  });
+}
+
+/**
+ * Actualiza SOLO la región de la tabla — se usa mientras se escribe en el
+ * buscador, para no destruir el input y hacerle perder el foco en cada tecleo.
+ */
+function paintTable(container, displayedSuppliers, allSuppliers) {
+  const sorted = sortState.key ? sortRows(displayedSuppliers, sortState.key, sortState.direction) : displayedSuppliers;
+  const region = container.querySelector('#suppliers-table-region');
+  if (region) region.innerHTML = renderSuppliersTable({ suppliers: sorted, sortState, searchTerm });
+  bindRowActions(container, displayedSuppliers, allSuppliers);
   bindTableSorting(container, {
     currentSort: sortState,
     onSort: (key, direction) => {
@@ -46,11 +66,16 @@ function bindEvents(container, suppliers, allSuppliers) {
 
   container.querySelector('#supplier-search')
     ?.addEventListener('input', debounce((e) => {
-      const term = normalizeForSearch(e.target.value.trim());
+      searchTerm = e.target.value.trim();
+      const term = normalizeForSearch(searchTerm);
       const filtered = allSuppliers.filter((s) => normalizeForSearch(s.name).includes(term));
-      paint(container, filtered, allSuppliers);
+      paintTable(container, filtered, allSuppliers);
     }, 250));
 
+  bindRowActions(container, suppliers, allSuppliers);
+}
+
+function bindRowActions(container, suppliers, allSuppliers) {
   container.querySelectorAll('[data-action="edit"]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const supplier = suppliers.find((s) => s.id === btn.dataset.id);

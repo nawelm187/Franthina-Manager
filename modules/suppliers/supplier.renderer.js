@@ -4,9 +4,31 @@
  */
 
 import { renderDataTable } from '../../components/dataTable.js';
-import { escapeHtml } from '../../core/utils.js';
+import { escapeHtml, emptyStateMessage } from '../../core/utils.js';
 
-export function renderSuppliersPage(container, { suppliers, sortState }) {
+/** Renderiza solo la tabla — se reusa al buscar, para refrescar nada más
+ *  que esta región y no pisar (ni hacerle perder el foco a) el buscador. */
+export function renderSuppliersTable({ suppliers: rows, sortState, searchTerm = '' }) {
+  return renderDataTable({
+    sortKey: sortState?.key ?? null,
+    sortDirection: sortState?.direction ?? 'asc',
+    columns: [
+      { key: 'name', label: 'Nombre', sortable: true },
+      { key: 'contactName', label: 'Contacto', render: (r) => escapeHtml(r.contactName || '—') },
+      { key: 'phone', label: 'Teléfono', render: (r) => escapeHtml(r.phone || '—') },
+      { key: 'leadTimeDays', label: 'Entrega', sortable: true, render: (r) => `${r.leadTimeDays} días` },
+    ],
+    rows,
+    emptyMessage: emptyStateMessage(searchTerm, 'Todavía no cargaste ningún proveedor.'),
+    rowActionsHtml: (row) => `
+      <div class="row gap-2">
+        <button class="btn btn--ghost btn--icon-only" data-action="edit" data-id="${row.id}" aria-label="Editar ${escapeHtml(row.name)}">✏️</button>
+        <button class="btn btn--ghost btn--icon-only" data-action="delete" data-id="${row.id}" aria-label="Eliminar ${escapeHtml(row.name)}">🗑️</button>
+      </div>`,
+  });
+}
+
+export function renderSuppliersPage(container, { suppliers, sortState, searchTerm = '' }) {
   container.innerHTML = `
     <header class="row" style="justify-content:space-between; margin-bottom: var(--space-5); flex-wrap:wrap; gap: var(--space-3);">
       <div>
@@ -20,27 +42,11 @@ export function renderSuppliersPage(container, { suppliers, sortState }) {
 
     <div class="field" style="max-width: 360px;">
       <label class="field__label" for="supplier-search">Buscar proveedor</label>
-      <input class="input" type="search" id="supplier-search" placeholder="Escribí un nombre..." />
+      <input class="input" type="search" id="supplier-search" placeholder="Escribí un nombre..." value="${escapeHtml(searchTerm)}" />
     </div>
 
     <div id="suppliers-table-region">
-      ${renderDataTable({
-        sortKey: sortState?.key ?? null,
-        sortDirection: sortState?.direction ?? 'asc',
-        columns: [
-          { key: 'name', label: 'Nombre', sortable: true },
-          { key: 'contactName', label: 'Contacto', render: (r) => escapeHtml(r.contactName || '—') },
-          { key: 'phone', label: 'Teléfono', render: (r) => escapeHtml(r.phone || '—') },
-          { key: 'leadTimeDays', label: 'Entrega', sortable: true, render: (r) => `${r.leadTimeDays} días` },
-        ],
-        rows: suppliers,
-        emptyMessage: 'Todavía no cargaste ningún proveedor.',
-        rowActionsHtml: (row) => `
-          <div class="row gap-2">
-            <button class="btn btn--ghost btn--icon-only" data-action="edit" data-id="${row.id}" aria-label="Editar ${escapeHtml(row.name)}">✏️</button>
-            <button class="btn btn--ghost btn--icon-only" data-action="delete" data-id="${row.id}" aria-label="Eliminar ${escapeHtml(row.name)}">🗑️</button>
-          </div>`,
-      })}
+      ${renderSuppliersTable({ suppliers, sortState, searchTerm })}
     </div>
   `;
 }
