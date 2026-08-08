@@ -136,8 +136,23 @@ function openCustomerForm(container, customer) {
 
 function paintFieldErrors(fieldErrors) {
   document.querySelectorAll('[data-error-for]').forEach((el) => { el.hidden = true; el.textContent = ''; });
+  document.querySelectorAll('.field.has-error').forEach((el) => el.classList.remove('has-error'));
+  document.querySelectorAll('[aria-invalid="true"]').forEach((el) => {
+    el.removeAttribute('aria-invalid');
+    el.removeAttribute('aria-describedby');
+  });
   Object.entries(fieldErrors).forEach(([field, message]) => {
     const el = document.querySelector(`[data-error-for="${field}"]`);
-    if (el) { el.hidden = false; el.textContent = `⚠ ${message}`; }
+    const input = document.getElementById(`f-${field}`);
+    if (el) {
+      el.hidden = false;
+      el.textContent = `⚠ ${message}`;
+      if (!el.id) el.id = `error-${field}`;
+    }
+    if (input) {
+      input.setAttribute('aria-invalid', 'true');
+      if (el) input.setAttribute('aria-describedby', el.id);
+      input.closest('.field')?.classList.add('has-error');
+    }
   });
 }
