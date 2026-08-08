@@ -4,13 +4,15 @@
  */
 
 import { customerService } from './customer.service.js';
-import { renderCustomersPage, customerFormHtml } from './customer.renderer.js';
+import { renderCustomersPage, renderCustomersTable, customerFormHtml } from './customer.renderer.js';
 import { createEmptyCustomer } from './customer.model.js';
 import { openModal } from '../../components/modal.js';
 import { confirmAction } from '../../components/confirm.js';
 import { showToast } from '../../components/toast.js';
 import { handleError, ValidationError } from '../../core/errors.js';
 import { debounce, normalizeForSearch } from '../../core/utils.js';
+
+let searchTerm = '';
 
 export async function render(_params, container) {
   container.innerHTML = '<div class="state-panel"><div class="skeleton" style="width:100%;height:240px;"></div></div>';
@@ -21,12 +23,23 @@ export async function render(_params, container) {
   } catch (err) {
     handleError(err, 'customers:list');
   }
+  searchTerm = '';
   paint(container, customers);
 }
 
 function paint(container, customers) {
-  renderCustomersPage(container, { customers });
+  renderCustomersPage(container, { customers, searchTerm });
   bindEvents(container, customers);
+}
+
+/**
+ * Actualiza SOLO la región de la tabla — se usa mientras se escribe en el
+ * buscador, para no destruir el input y hacerle perder el foco en cada tecleo.
+ */
+function paintTable(container, displayedCustomers, allCustomers) {
+  const region = container.querySelector('#customers-table-region');
+  if (region) region.innerHTML = renderCustomersTable({ customers: displayedCustomers, searchTerm });
+  bindRowActions(container, displayedCustomers, allCustomers);
 }
 
 function bindEvents(container, allCustomers) {
@@ -35,22 +48,26 @@ function bindEvents(container, allCustomers) {
 
   container.querySelector('#customer-search')
     ?.addEventListener('input', debounce((e) => {
-      const term = normalizeForSearch(e.target.value.trim());
+      searchTerm = e.target.value.trim();
+      const term = normalizeForSearch(searchTerm);
       const filtered = allCustomers.filter((c) => normalizeForSearch(c.name).includes(term));
-      renderCustomersPage(container, { customers: filtered });
-      bindEvents(container, allCustomers);
+      paintTable(container, filtered, allCustomers);
     }, 250));
 
+  bindRowActions(container, allCustomers, allCustomers);
+}
+
+function bindRowActions(container, displayedCustomers, allCustomers) {
   container.querySelectorAll('[data-action="edit"]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const customer = allCustomers.find((c) => c.id === btn.dataset.id);
+      const customer = displayedCustomers.find((c) => c.id === btn.dataset.id);
       openCustomerForm(container, customer);
     });
   });
 
   container.querySelectorAll('[data-action="delete"]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      const customer = allCustomers.find((c) => c.id === btn.dataset.id);
+      const customer = displayedCustomers.find((c) => c.id === btn.dataset.id);
       const confirmed = await confirmAction({
         title: 'Eliminar cliente',
         message: `¿Seguro que querés eliminar a "${customer.name}"? Esta acción no se puede deshacer.`,

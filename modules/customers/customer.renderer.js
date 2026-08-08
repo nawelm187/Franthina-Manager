@@ -4,9 +4,29 @@
  */
 
 import { renderDataTable } from '../../components/dataTable.js';
-import { escapeHtml, formatDate } from '../../core/utils.js';
+import { escapeHtml, formatDate, emptyStateMessage } from '../../core/utils.js';
 
-export function renderCustomersPage(container, { customers }) {
+/** Renderiza solo la tabla — se reusa al buscar, para refrescar nada más
+ *  que esta región y no pisar (ni hacerle perder el foco a) el buscador. */
+export function renderCustomersTable({ customers: rows, searchTerm = '' }) {
+  return renderDataTable({
+    columns: [
+      { key: 'name', label: 'Nombre' },
+      { key: 'phone', label: 'Teléfono', render: (r) => escapeHtml(r.phone || '—') },
+      { key: 'email', label: 'Email', render: (r) => escapeHtml(r.email || '—') },
+      { key: 'birthday', label: 'Cumpleaños', render: (r) => r.birthday ? formatDate(r.birthday) : '—' },
+    ],
+    rows,
+    emptyMessage: emptyStateMessage(searchTerm, 'Todavía no cargaste ningún cliente.'),
+    rowActionsHtml: (row) => `
+      <div class="row gap-2">
+        <button class="btn btn--ghost btn--icon-only" data-action="edit" data-id="${row.id}" aria-label="Editar ${escapeHtml(row.name)}">✏️</button>
+        <button class="btn btn--ghost btn--icon-only" data-action="delete" data-id="${row.id}" aria-label="Eliminar ${escapeHtml(row.name)}">🗑️</button>
+      </div>`,
+  });
+}
+
+export function renderCustomersPage(container, { customers, searchTerm = '' }) {
   container.innerHTML = `
     <header class="row" style="justify-content:space-between; margin-bottom: var(--space-5); flex-wrap:wrap; gap: var(--space-3);">
       <div>
@@ -20,25 +40,11 @@ export function renderCustomersPage(container, { customers }) {
 
     <div class="field" style="max-width: 360px;">
       <label class="field__label" for="customer-search">Buscar cliente</label>
-      <input class="input" type="search" id="customer-search" placeholder="Escribí un nombre..." />
+      <input class="input" type="search" id="customer-search" placeholder="Escribí un nombre..." value="${escapeHtml(searchTerm)}" />
     </div>
 
     <div id="customers-table-region">
-      ${renderDataTable({
-        columns: [
-          { key: 'name', label: 'Nombre' },
-          { key: 'phone', label: 'Teléfono', render: (r) => escapeHtml(r.phone || '—') },
-          { key: 'email', label: 'Email', render: (r) => escapeHtml(r.email || '—') },
-          { key: 'birthday', label: 'Cumpleaños', render: (r) => r.birthday ? formatDate(r.birthday) : '—' },
-        ],
-        rows: customers,
-        emptyMessage: 'Todavía no cargaste ningún cliente.',
-        rowActionsHtml: (row) => `
-          <div class="row gap-2">
-            <button class="btn btn--ghost btn--icon-only" data-action="edit" data-id="${row.id}" aria-label="Editar ${escapeHtml(row.name)}">✏️</button>
-            <button class="btn btn--ghost btn--icon-only" data-action="delete" data-id="${row.id}" aria-label="Eliminar ${escapeHtml(row.name)}">🗑️</button>
-          </div>`,
-      })}
+      ${renderCustomersTable({ customers, searchTerm })}
     </div>
   `;
 }
