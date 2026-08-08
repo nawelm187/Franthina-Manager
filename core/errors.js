@@ -43,11 +43,23 @@ export class InsufficientStockError extends AppError {
   }
 }
 
+/**
+ * El navegador no pudo guardar en localStorage: sin espacio disponible,
+ * en una pestaña de incógnito/privada que lo bloquea, o con la
+ * configuración de cookies/almacenamiento desactivada.
+ */
+export class StorageError extends AppError {
+  constructor(message = 'No se pudo guardar: el navegador se quedó sin espacio o está bloqueando el almacenamiento local (por ejemplo, en una pestaña de incógnito). Liberá espacio o probá en una pestaña normal.') {
+    super(message);
+  }
+}
+
 const FRIENDLY_MESSAGES = {
   ValidationError: (err) => err.message || 'Revisá los datos ingresados.',
   NotFoundError: () => 'No pudimos encontrar lo que buscás.',
   InsufficientStockError: (err) =>
     `Falta stock de: ${err.shortages.map((s) => s.name).join(', ')}.`,
+  StorageError: (err) => err.message,
   default: () => 'Ocurrió un problema inesperado. Ya lo registramos e intentaremos que no vuelva a pasar.',
 };
 
