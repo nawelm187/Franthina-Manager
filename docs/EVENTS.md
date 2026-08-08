@@ -35,8 +35,9 @@ Si agregás un evento nuevo, agregalo también acá en el mismo commit.
 | `supplier:updated` | `supplier.service.js` → `update()` | el proveedor actualizado | nadie todavía |
 | `supplier:deleted` | `supplier.service.js` → `remove()` | `{ id }` | nadie todavía |
 | `purchase:created` | `purchase.service.js` → `create()` | la compra creada | nadie todavía |
-| `route:changed` | `core/router.js`, en cada navegación | el `pathname` actual | `app.js` (resalta el link activo en el nav) |
+| `route:changed` | `core/router.js`, en cada navegación | el `pathname` actual | `app.js` (resalta el link activo en el nav, y reconstruye el chrome tienda/admin si cambió de zona) |
 | `a11y:changed` | `core/state.js` → `setA11yPref()` | las preferencias de accesibilidad completas | `app.js` (aplica las clases de accesibilidad al `<html>`) |
+| `cart:changed` | `core/storeCart.js`, en cada cambio al carrito de la tienda | el array de líneas del carrito | `app.js` (actualiza el número en el ícono del carrito del header de la tienda) |
 | `backup:exported` | `core/backup.js` → `downloadBackup()` | `{ filename, exportedAt }` | nadie todavía |
 | `backup:restored` | `core/backup.js` → `restoreBackup()` | `{ exportedAt, collections }` | nadie todavía |
 | `toast:show` | `core/errors.js` → `handleError()`, y cualquier módulo que llame `showToast()` directamente | `{ type, message }` | `components/toast.js` (único lugar que efectivamente pinta el toast) |

@@ -25,6 +25,18 @@ después se programa.
 - ✅ PWA básica (manifest + service worker con cache del shell y de módulos visitados)
 - ✅ Test de integración de extremo a extremo (119 verificaciones) contra el
   código real del proyecto
+- ✅ Publicación en GitHub Pages, con soporte de subdirectorio (project site),
+  modo offline network-first, y un pase de responsividad mobile en toda la app
+- ✅ **v0.19 — Tienda pública**, separada de la Administración: `/` es ahora
+  un catálogo público (categoría, foto, descripción, precio, disponibilidad
+  — nunca costo ni stock exacto) con carrito y checkout, y todo el sistema
+  de gestión existente se movió intacto detrás de `/admin`. El checkout crea
+  un Pedido real (mismo `orderService` que usa el admin), así que un pedido
+  de la tienda aparece automáticamente en `/admin/pedidos`. Sin login
+  todavía — `/admin` es una URL más, no un área protegida de verdad; eso es
+  la v0.24 del roadmap original (ver más abajo). Esto reemplazó al plan
+  original de "v0.19 — Simulador de costos y precios" (ver más abajo), que
+  se corrió a una versión futura por decisión de producto.
 
 ## El núcleo comercial completo ya está cubierto
 
@@ -126,11 +138,12 @@ real termine mostrando que hace falta primero:
 - **v0.18 — Reportes avanzados**: estadísticas de costos y rentabilidad
   real (cruzando Ventas con el costo de receta de lo vendido — ver
   `docs/module-reports.md`).
-- **v0.19 — Simulador de costos y precios**: variar el precio de un
-  ingrediente o el precio de venta y ver el impacto antes de aplicarlo de
-  verdad. Es una extensión natural de `recipeService.calculateCost()`, que
-  ya es una función pura — un simulador es, en esencia, llamarla con datos
-  hipotéticos en vez de los guardados.
+- **v0.19 — Simulador de costos y precios** *(plan original, superado —
+  ver "Ya construido": v0.19 terminó siendo la Tienda pública)*: variar el
+  precio de un ingrediente o el precio de venta y ver el impacto antes de
+  aplicarlo de verdad. Sigue siendo una buena idea para una versión futura
+  — es una extensión natural de `recipeService.calculateCost()`, que ya es
+  una función pura.
 - **v1.0 — Estabilización**: corrección de errores, rendimiento,
   documentación final. Con `docs/METRICS.md` ya llevando el conteo de
   tests por versión, esta etapa tiene una forma objetiva de medir si
