@@ -80,3 +80,14 @@ export function normalizeForSearch(text) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 }
+
+/**
+ * Mensaje de estado vacío para listas con buscador: distingue "todavía no
+ * hay datos cargados" de "la búsqueda no encontró nada", para no mostrar el
+ * mismo texto (y la misma sugerencia de "cargá el primero") en los dos casos.
+ * @param {string} term - término tal como lo escribió el usuario (sin normalizar), ya trimeado
+ * @param {string} baseMessage - mensaje a usar cuando no hay búsqueda activa
+ */
+export function emptyStateMessage(term, baseMessage) {
+  return term ? `No encontramos resultados para "${term}".` : baseMessage;
+}
