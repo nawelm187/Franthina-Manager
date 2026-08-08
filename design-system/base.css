@@ -10,6 +10,10 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
+  /* Red de seguridad: ningún elemento interno debería poder forzar scroll
+     horizontal, pero si algo lo intenta (una tabla, una fila muy angosta),
+     esto evita que la página entera "se corte" hacia la derecha. */
+  overflow-x: hidden;
 }
 
 body {
@@ -20,6 +24,10 @@ body {
   background: var(--surface-base);
   transition: background var(--transition-normal), color var(--transition-normal);
   -webkit-font-smoothing: antialiased;
+  /* Si un texto sin espacios (un email largo, una URL) es más ancho que la
+     pantalla, que se corte de línea en vez de forzar scroll horizontal.
+     Se hereda a todo el texto de la app. */
+  overflow-wrap: break-word;
 }
 
 h1, h2, h3, h4 {
