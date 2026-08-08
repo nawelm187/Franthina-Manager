@@ -1,5 +1,49 @@
 # Changelog
 
+## [Sin versionar] — Fix: la página se veía "cortada" y había que scrollear a la derecha en celular
+Causa real: CSS Grid no permite que un ítem de grid (`.app-main`, dentro de
+`.app-shell`) se achique más allá del contenido más ancho que tenga adentro,
+a menos que se le indique lo contrario (`min-width` implícito es `auto`, no
+`0`). En pantallas angostas, eso "empujaba" toda la página hacia la derecha
+en vez de dejar que el contenido interno (tablas, filas) scrollee por su
+cuenta como estaba pensado.
+
+### Corregido
+- `.app-shell`, `.app-sidebar` y `.app-main`: agregado `min-width: 0`, para
+  que puedan achicarse al ancho real de la pantalla en vez de heredar el
+  ancho de su contenido más ancho.
+- `html, body`: agregado `overflow-x: hidden` como red de seguridad general,
+  para que ningún elemento (presente o futuro) pueda volver a generar scroll
+  horizontal de la página completa.
+- `body`: agregado `overflow-wrap: break-word` (heredado por todo el texto
+  de la app), para que un texto largo sin espacios (un email, una URL) se
+  corte de línea en vez de forzar desborde horizontal.
+
+## [Sin versionar] — Pulido v0.18: búsqueda, estados vacíos e íconos
+Antes de arrancar v0.19 (separación tienda/administración), un pase de
+pulido sobre lo que ya existe.
+
+### Corregido
+- **Bug de foco en los buscadores** (Productos, Ingredientes, Recetas,
+  Clientes, Proveedores): al escribir, cada tecleo terminaba redibujando la
+  página completa — incluida la propia caja de búsqueda — así que el campo
+  perdía el foco y el texto escrito se borraba solo cada ~250ms. Ahora la
+  búsqueda solo redibuja la región de la tabla (`renderXTable()`, nuevo, se
+  extrajo del renderer de página completa); la caja de búsqueda nunca se
+  destruye mientras se escribe.
+- El término buscado ahora se mantiene visible en el campo si la tabla se
+  vuelve a pintar por otro motivo (ej. ordenar una columna mientras hay una
+  búsqueda activa) — antes se perdía.
+
+### Agregado
+- `core/utils.js`: `emptyStateMessage(term, baseMessage)` — distingue el
+  mensaje de "todavía no cargaste nada" del de "no encontramos resultados
+  para tu búsqueda", que antes eran el mismo texto (confuso: sugería crear
+  el primer registro aunque ya hubiera datos, solo que la búsqueda no
+  encontró coincidencias).
+- `apple-touch-icon` en `index.html`, para que el logo de Franthina se vea
+  bien al "Agregar a pantalla de inicio" en iOS.
+
 ## [Sin versionar] — Fix: botón ☰ tapaba el título y el logo
 El botón hamburguesa (`position: fixed`, arriba a la izquierda) quedaba
 flotando encima del contenido en vez de dejarle lugar: tapaba el `<h1>` de
