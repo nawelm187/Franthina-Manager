@@ -27,6 +27,9 @@ export function validateProduct(data) {
   if (!isNonNegativeNumber(data.stock)) {
     fieldErrors.stock = 'El stock no puede ser negativo.';
   }
+  if (data.description && data.description.length > 500) {
+    fieldErrors.description = 'La descripción no puede superar los 500 caracteres.';
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
     throw new ValidationError('Revisá los campos marcados en el formulario.', fieldErrors);

@@ -15,11 +15,14 @@ export const PRODUCT_COLLECTION = COLLECTIONS.PRODUCTS;
  * @property {string} category
  * @property {string|null} recipeId - receta opcional que define este producto; si está
  *   seteada, el costo puede sincronizarse con el costo calculado de la receta
- * @property {number} costPrice     - precio de costo
- * @property {number} sellPrice     - precio sugerido de venta
+ * @property {number} costPrice     - precio de costo (NUNCA se muestra en la tienda pública)
+ * @property {number} sellPrice     - precio sugerido de venta (este sí se muestra en la tienda)
  * @property {number} stock
- * @property {boolean} active
- * @property {string} notes
+ * @property {boolean} active       - además de su uso interno, controla si el producto
+ *   aparece en la tienda pública (inactivo = oculto para el cliente)
+ * @property {string} notes         - notas internas, NUNCA se muestran en la tienda pública
+ * @property {string} description   - descripción pública, se muestra en la tienda
+ * @property {string} imageUrl      - URL de una foto pública del producto (opcional)
  * @property {string} createdAt
  * @property {string} updatedAt
  */
@@ -35,5 +38,7 @@ export function createEmptyProduct() {
     stock: 0,
     active: true,
     notes: '',
+    description: '',
+    imageUrl: '',
   };
 }

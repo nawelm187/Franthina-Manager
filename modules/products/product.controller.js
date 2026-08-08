@@ -165,6 +165,8 @@ function openProductForm(container, product, recipes, allProducts) {
             stock: Number(formData.get('stock')) || 0,
             active: formData.get('active') === 'on',
             notes: formData.get('notes')?.toString() ?? '',
+            description: formData.get('description')?.toString().trim() ?? '',
+            imageUrl: formData.get('imageUrl')?.toString().trim() ?? '',
           };
 
           const duplicate = findDuplicateProductName(allProducts, payload.name, isEdit ? product.id : null);
@@ -228,10 +230,23 @@ function setupRecipeSync(modalEl, existingProductId) {
 
 function paintFieldErrors(fieldErrors) {
   document.querySelectorAll('[data-error-for]').forEach((el) => { el.hidden = true; el.textContent = ''; });
+  document.querySelectorAll('.field.has-error').forEach((el) => el.classList.remove('has-error'));
+  document.querySelectorAll('[aria-invalid="true"]').forEach((el) => {
+    el.removeAttribute('aria-invalid');
+    el.removeAttribute('aria-describedby');
+  });
   Object.entries(fieldErrors).forEach(([field, message]) => {
     const el = document.querySelector(`[data-error-for="${field}"]`);
     const input = document.getElementById(`f-${field === 'costPrice' ? 'cost' : field === 'sellPrice' ? 'sell' : field}`);
-    if (el) { el.hidden = false; el.textContent = `⚠ ${message}`; }
-    input?.closest('.field')?.classList.add('has-error');
+    if (el) {
+      el.hidden = false;
+      el.textContent = `⚠ ${message}`;
+      if (!el.id) el.id = `error-${field}`;
+    }
+    if (input) {
+      input.setAttribute('aria-invalid', 'true');
+      if (el) input.setAttribute('aria-describedby', el.id);
+      input.closest('.field')?.classList.add('has-error');
+    }
   });
 }

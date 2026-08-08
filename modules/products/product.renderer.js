@@ -124,11 +124,22 @@ export function productFormHtml(product, recipes) {
       </div>
       <div class="checkbox-row field">
         <input type="checkbox" id="f-active" name="active" ${product.active ? 'checked' : ''} />
-        <label for="f-active">Producto activo (visible para la venta)</label>
+        <label for="f-active">Producto activo (visible para la venta y en la tienda online)</label>
       </div>
       <div class="field">
-        <label class="field__label" for="f-notes">Notas</label>
+        <label class="field__label" for="f-description">Descripción para la tienda online</label>
+        <textarea class="textarea" id="f-description" name="description" maxlength="500" placeholder="Ej: Bizcochuelo de chocolate relleno con dulce de leche y cobertura de ganache.">${escapeHtml(product.description)}</textarea>
+        <div class="field__hint">Esto lo ve cualquier visitante de la tienda — nunca el costo ni el stock exacto.</div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="f-image">URL de una foto (opcional)</label>
+        <input class="input" type="url" id="f-image" name="imageUrl" value="${escapeHtml(product.imageUrl)}" placeholder="https://..." />
+        <div class="field__hint">Pegá el link de una imagen ya subida a algún lado (por ejemplo, una foto de Google Drive o Imgur configurada como pública).</div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="f-notes">Notas internas</label>
         <textarea class="textarea" id="f-notes" name="notes">${escapeHtml(product.notes)}</textarea>
+        <div class="field__hint">Solo las ve el equipo — nunca aparecen en la tienda online.</div>
       </div>
     </form>
   `;
