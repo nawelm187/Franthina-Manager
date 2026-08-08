@@ -8,6 +8,12 @@
 import { StorageAdapter } from './StorageAdapter.js';
 import { APP_CONFIG } from '../config.js';
 import { generateId } from '../utils.js';
+import { StorageError } from '../errors.js';
+import { eventBus, EVENTS } from '../eventBus.js';
+
+// Colecciones sobre las que ya se avisó de datos corruptos en esta sesión —
+// evita repetir el mismo toast en cada lectura (el adapter se lee muy seguido).
+const warnedCorrupted = new Set();
 
 export class LocalStorageAdapter extends StorageAdapter {
   #key(collection) {
@@ -20,12 +26,23 @@ export class LocalStorageAdapter extends StorageAdapter {
       return raw ? JSON.parse(raw) : [];
     } catch (err) {
       console.error(`[LocalStorageAdapter] Datos corruptos en "${collection}"`, err);
+      if (!warnedCorrupted.has(collection)) {
+        warnedCorrupted.add(collection);
+        eventBus.emit(EVENTS.TOAST_SHOW, {
+          type: 'warning',
+          message: 'Algunos datos guardados no se pudieron leer y se muestran vacíos por ahora, para no bloquear la app. Si tenés un respaldo, podés restaurarlo desde Configuración.',
+        });
+      }
       return [];
     }
   }
 
   #writeAll(collection, records) {
-    window.localStorage.setItem(this.#key(collection), JSON.stringify(records));
+    try {
+      window.localStorage.setItem(this.#key(collection), JSON.stringify(records));
+    } catch (err) {
+      throw new StorageError();
+    }
   }
 
   async getAll(collection) {
@@ -69,6 +86,10 @@ export class LocalStorageAdapter extends StorageAdapter {
   }
 
   async setMeta(key, value) {
-    window.localStorage.setItem(this.#key(`meta:${key}`), JSON.stringify(value));
+    try {
+      window.localStorage.setItem(this.#key(`meta:${key}`), JSON.stringify(value));
+    } catch (err) {
+      throw new StorageError();
+    }
   }
 }
