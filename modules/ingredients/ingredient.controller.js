@@ -4,7 +4,7 @@
  */
 
 import { ingredientService } from './ingredient.service.js';
-import { renderIngredientsPage, ingredientFormHtml } from './ingredient.renderer.js';
+import { renderIngredientsPage, renderIngredientsTable, ingredientFormHtml } from './ingredient.renderer.js';
 import { createEmptyIngredient } from './ingredient.model.js';
 import { openModal } from '../../components/modal.js';
 import { confirmAction } from '../../components/confirm.js';
@@ -15,6 +15,7 @@ import { recipeService } from '../recipes/recipe.service.js';
 import { debounce, normalizeForSearch } from '../../core/utils.js';
 
 let sortState = { key: null, direction: 'asc' };
+let searchTerm = '';
 
 export async function render(_params, container) {
   container.innerHTML = '<div class="state-panel"><div class="skeleton" style="width:100%;height:240px;"></div></div>';
@@ -25,7 +26,15 @@ export async function render(_params, container) {
   } catch (err) {
     handleError(err, 'ingredients:list');
   }
+  searchTerm = '';
   paint(container, allItems, allItems);
+}
+
+function withLowStockFlag(items) {
+  // El estado de "stock bajo" es un valor derivado (no existe como campo en el
+  // registro guardado) — se calcula acá, en el Controller, para que el
+  // Renderer nunca tenga que conocer ingredientService (ver docs/ARCHITECTURE.md).
+  return items.map((i) => ({ ...i, lowStock: ingredientService.isLowStock(i) }));
 }
 
 /**
@@ -36,12 +45,26 @@ export async function render(_params, container) {
  */
 function paint(container, displayedItems, allItems) {
   const sortedItems = sortState.key ? sortRows(displayedItems, sortState.key, sortState.direction) : displayedItems;
-  // El estado de "stock bajo" es un valor derivado (no existe como campo en el
-  // registro guardado) — se calcula ACÁ, en el Controller, para que el
-  // Renderer nunca tenga que conocer ingredientService (ver docs/ARCHITECTURE.md).
-  const withLowStockFlag = sortedItems.map((i) => ({ ...i, lowStock: ingredientService.isLowStock(i) }));
-  renderIngredientsPage(container, { ingredients: withLowStockFlag, sortState });
+  renderIngredientsPage(container, { ingredients: withLowStockFlag(sortedItems), sortState, searchTerm });
   bindEvents(container, displayedItems, allItems);
+  bindTableSorting(container, {
+    currentSort: sortState,
+    onSort: (key, direction) => {
+      sortState = { key, direction };
+      paint(container, displayedItems, allItems);
+    },
+  });
+}
+
+/**
+ * Actualiza SOLO la región de la tabla — se usa mientras se escribe en el
+ * buscador, para no destruir el input y hacerle perder el foco en cada tecleo.
+ */
+function paintTable(container, displayedItems, allItems) {
+  const sortedItems = sortState.key ? sortRows(displayedItems, sortState.key, sortState.direction) : displayedItems;
+  const region = container.querySelector('#ingredients-table-region');
+  if (region) region.innerHTML = renderIngredientsTable({ ingredients: withLowStockFlag(sortedItems), sortState, searchTerm });
+  bindRowActions(container, displayedItems, allItems);
   bindTableSorting(container, {
     currentSort: sortState,
     onSort: (key, direction) => {
@@ -79,11 +102,16 @@ function bindEvents(container, displayedItems, allItems) {
 
   container.querySelector('#ingredient-search')
     ?.addEventListener('input', debounce((e) => {
-      const term = normalizeForSearch(e.target.value.trim());
+      searchTerm = e.target.value.trim();
+      const term = normalizeForSearch(searchTerm);
       const filtered = allItems.filter((i) => normalizeForSearch(i.name).includes(term));
-      paint(container, filtered, allItems);
+      paintTable(container, filtered, allItems);
     }, 250));
 
+  bindRowActions(container, displayedItems, allItems);
+}
+
+function bindRowActions(container, displayedItems, allItems) {
   container.querySelectorAll('[data-action="edit"]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const item = displayedItems.find((i) => i.id === btn.dataset.id);

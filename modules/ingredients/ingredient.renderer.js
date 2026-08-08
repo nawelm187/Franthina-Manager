@@ -5,10 +5,39 @@
  */
 
 import { renderDataTable } from '../../components/dataTable.js';
-import { formatCurrency, escapeHtml } from '../../core/utils.js';
+import { formatCurrency, escapeHtml, emptyStateMessage } from '../../core/utils.js';
 import { UNITS } from './ingredient.model.js';
 
-export function renderIngredientsPage(container, { ingredients, sortState }) {
+/** Renderiza solo la tabla — se reusa al buscar, para refrescar nada más
+ *  que esta región y no pisar (ni hacerle perder el foco a) el buscador. */
+export function renderIngredientsTable({ ingredients: rows, sortState, searchTerm = '' }) {
+  return renderDataTable({
+    sortKey: sortState?.key ?? null,
+    sortDirection: sortState?.direction ?? 'asc',
+    columns: [
+      { key: 'name', label: 'Nombre', sortable: true },
+      { key: 'unit', label: 'Unidad' },
+      { key: 'stock', label: 'Stock', sortable: true },
+      { key: 'cost', label: 'Costo', sortable: true, render: (r) => formatCurrency(r.cost) },
+      {
+        key: 'status',
+        label: 'Estado',
+        render: (r) => r.lowStock
+          ? '<span class="badge badge--danger">⚠ Stock bajo</span>'
+          : '<span class="badge badge--success">✓ OK</span>',
+      },
+    ],
+    rows,
+    emptyMessage: emptyStateMessage(searchTerm, 'Todavía no cargaste ningún ingrediente.'),
+    rowActionsHtml: (row) => `
+      <div class="row gap-2">
+        <button class="btn btn--ghost btn--icon-only" data-action="edit" data-id="${row.id}" aria-label="Editar ${escapeHtml(row.name)}">✏️</button>
+        <button class="btn btn--ghost btn--icon-only" data-action="delete" data-id="${row.id}" aria-label="Eliminar ${escapeHtml(row.name)}">🗑️</button>
+      </div>`,
+  });
+}
+
+export function renderIngredientsPage(container, { ingredients, sortState, searchTerm = '' }) {
   container.innerHTML = `
     <header class="row" style="justify-content:space-between; margin-bottom: var(--space-5); flex-wrap:wrap; gap: var(--space-3);">
       <div>
@@ -22,34 +51,11 @@ export function renderIngredientsPage(container, { ingredients, sortState }) {
 
     <div class="field" style="max-width: 360px;">
       <label class="field__label" for="ingredient-search">Buscar ingrediente</label>
-      <input class="input" type="search" id="ingredient-search" placeholder="Escribí un nombre..." />
+      <input class="input" type="search" id="ingredient-search" placeholder="Escribí un nombre..." value="${escapeHtml(searchTerm)}" />
     </div>
 
     <div id="ingredients-table-region">
-      ${renderDataTable({
-        sortKey: sortState?.key ?? null,
-        sortDirection: sortState?.direction ?? 'asc',
-        columns: [
-          { key: 'name', label: 'Nombre', sortable: true },
-          { key: 'unit', label: 'Unidad' },
-          { key: 'stock', label: 'Stock', sortable: true },
-          { key: 'cost', label: 'Costo', sortable: true, render: (r) => formatCurrency(r.cost) },
-          {
-            key: 'status',
-            label: 'Estado',
-            render: (r) => r.lowStock
-              ? '<span class="badge badge--danger">⚠ Stock bajo</span>'
-              : '<span class="badge badge--success">✓ OK</span>',
-          },
-        ],
-        rows: ingredients,
-        emptyMessage: 'Todavía no cargaste ningún ingrediente.',
-        rowActionsHtml: (row) => `
-          <div class="row gap-2">
-            <button class="btn btn--ghost btn--icon-only" data-action="edit" data-id="${row.id}" aria-label="Editar ${escapeHtml(row.name)}">✏️</button>
-            <button class="btn btn--ghost btn--icon-only" data-action="delete" data-id="${row.id}" aria-label="Eliminar ${escapeHtml(row.name)}">🗑️</button>
-          </div>`,
-      })}
+      ${renderIngredientsTable({ ingredients, sortState, searchTerm })}
     </div>
   `;
 }
