@@ -6,9 +6,55 @@
  */
 
 import { renderDataTable } from '../../components/dataTable.js';
-import { formatCurrency, escapeHtml } from '../../core/utils.js';
+import { formatCurrency, escapeHtml, emptyStateMessage } from '../../core/utils.js';
 
-export function renderProductsPage(container, { products: rows, recipesById, sortState }) {
+/** Renderiza solo la tabla (sin el resto de la página) — se reusa al buscar,
+ *  para poder refrescar nada más que esta región y no pisar el buscador. */
+export function renderProductsTable({ products: rows, recipesById, sortState, searchTerm = '' }) {
+  return renderDataTable({
+    sortKey: sortState?.key ?? null,
+    sortDirection: sortState?.direction ?? 'asc',
+    columns: [
+      { key: 'name', label: 'Nombre', sortable: true },
+      { key: 'category', label: 'Categoría', sortable: true },
+      {
+        key: 'recipeId',
+        label: 'Receta',
+        render: (r) => r.recipeId
+          ? `<span class="badge badge--info">📖 ${escapeHtml(recipesById.get(r.recipeId)?.name ?? 'Receta eliminada')}</span>`
+          : '<span class="field__hint">Sin vincular</span>',
+      },
+      { key: 'costPrice', label: 'Costo', sortable: true, render: (r) => formatCurrency(r.costPrice) },
+      { key: 'sellPrice', label: 'Venta', sortable: true, render: (r) => formatCurrency(r.sellPrice) },
+      {
+        key: 'marginPct',
+        label: 'Margen',
+        sortable: true,
+        render: (r) => {
+          const variant = r.marginPct >= 40 ? 'success' : r.marginPct >= 15 ? 'warning' : 'danger';
+          return `<span class="badge badge--${variant}">${r.marginPct}%</span>`;
+        },
+      },
+      { key: 'stock', label: 'Stock', sortable: true },
+      {
+        key: 'active',
+        label: 'Estado',
+        render: (r) => r.active
+          ? '<span class="badge badge--success">✓ Activo</span>'
+          : '<span class="badge badge--danger">✕ Inactivo</span>',
+      },
+    ],
+    rows,
+    emptyMessage: emptyStateMessage(searchTerm, 'Todavía no cargaste ningún producto. Creá el primero con el botón "Nuevo producto".'),
+    rowActionsHtml: (row) => `
+      <div class="row gap-2">
+        <button class="btn btn--ghost btn--icon-only" data-action="edit" data-id="${row.id}" aria-label="Editar ${escapeHtml(row.name)}">✏️</button>
+        <button class="btn btn--ghost btn--icon-only" data-action="delete" data-id="${row.id}" aria-label="Eliminar ${escapeHtml(row.name)}">🗑️</button>
+      </div>`,
+  });
+}
+
+export function renderProductsPage(container, { products, recipesById, sortState, searchTerm = '' }) {
   container.innerHTML = `
     <header class="row" style="justify-content:space-between; margin-bottom: var(--space-5); flex-wrap:wrap; gap: var(--space-3);">
       <div>
@@ -22,51 +68,11 @@ export function renderProductsPage(container, { products: rows, recipesById, sor
 
     <div class="field" style="max-width: 360px;">
       <label class="field__label" for="product-search">Buscar producto</label>
-      <input class="input" type="search" id="product-search" placeholder="Escribí un nombre..." />
+      <input class="input" type="search" id="product-search" placeholder="Escribí un nombre..." value="${escapeHtml(searchTerm)}" />
     </div>
 
     <div id="products-table-region">
-      ${renderDataTable({
-        sortKey: sortState?.key ?? null,
-        sortDirection: sortState?.direction ?? 'asc',
-        columns: [
-          { key: 'name', label: 'Nombre', sortable: true },
-          { key: 'category', label: 'Categoría', sortable: true },
-          {
-            key: 'recipeId',
-            label: 'Receta',
-            render: (r) => r.recipeId
-              ? `<span class="badge badge--info">📖 ${escapeHtml(recipesById.get(r.recipeId)?.name ?? 'Receta eliminada')}</span>`
-              : '<span class="field__hint">Sin vincular</span>',
-          },
-          { key: 'costPrice', label: 'Costo', sortable: true, render: (r) => formatCurrency(r.costPrice) },
-          { key: 'sellPrice', label: 'Venta', sortable: true, render: (r) => formatCurrency(r.sellPrice) },
-          {
-            key: 'marginPct',
-            label: 'Margen',
-            sortable: true,
-            render: (r) => {
-              const variant = r.marginPct >= 40 ? 'success' : r.marginPct >= 15 ? 'warning' : 'danger';
-              return `<span class="badge badge--${variant}">${r.marginPct}%</span>`;
-            },
-          },
-          { key: 'stock', label: 'Stock', sortable: true },
-          {
-            key: 'active',
-            label: 'Estado',
-            render: (r) => r.active
-              ? '<span class="badge badge--success">✓ Activo</span>'
-              : '<span class="badge badge--danger">✕ Inactivo</span>',
-          },
-        ],
-        rows,
-        emptyMessage: 'Todavía no cargaste ningún producto. Creá el primero con el botón "Nuevo producto".',
-        rowActionsHtml: (row) => `
-          <div class="row gap-2">
-            <button class="btn btn--ghost btn--icon-only" data-action="edit" data-id="${row.id}" aria-label="Editar ${escapeHtml(row.name)}">✏️</button>
-            <button class="btn btn--ghost btn--icon-only" data-action="delete" data-id="${row.id}" aria-label="Eliminar ${escapeHtml(row.name)}">🗑️</button>
-          </div>`,
-      })}
+      ${renderProductsTable({ products, recipesById, sortState, searchTerm })}
     </div>
   `;
 }

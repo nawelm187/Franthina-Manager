@@ -6,7 +6,7 @@
  */
 
 import { productService } from './product.service.js';
-import { renderProductsPage, productFormHtml } from './product.renderer.js';
+import { renderProductsPage, renderProductsTable, productFormHtml } from './product.renderer.js';
 import { createEmptyProduct } from './product.model.js';
 import { openModal } from '../../components/modal.js';
 import { confirmAction } from '../../components/confirm.js';
@@ -16,6 +16,7 @@ import { handleError, ValidationError } from '../../core/errors.js';
 import { debounce, formatCurrency, normalizeForSearch } from '../../core/utils.js';
 
 let sortState = { key: null, direction: 'asc' };
+let searchTerm = '';
 
 /** @param {object} params @param {HTMLElement} container */
 export async function render(_params, container) {
@@ -32,7 +33,15 @@ export async function render(_params, container) {
     handleError(err, 'products:list');
   }
 
+  searchTerm = '';
   paint(container, allProducts, recipes, allProducts);
+}
+
+function withMargin(products) {
+  // El margen es un valor derivado (no existe como campo en el registro guardado) —
+  // se calcula acá, antes de ordenar, para que ordenar por "Margen" funcione
+  // sobre el valor real y no sobre un campo inexistente en el dato crudo.
+  return products.map((p) => ({ ...p, marginPct: productService.margin(p) }));
 }
 
 /**
@@ -44,13 +53,29 @@ export async function render(_params, container) {
  */
 function paint(container, displayedProducts, recipes, allProducts) {
   const recipesById = new Map(recipes.map((r) => [r.id, r]));
-  // El margen es un valor derivado (no existe como campo en el registro guardado) —
-  // se calcula ACÁ, antes de ordenar, para que ordenar por "Margen" funcione
-  // sobre el valor real y no sobre un campo inexistente en el dato crudo.
-  const withMargin = displayedProducts.map((p) => ({ ...p, marginPct: productService.margin(p) }));
-  const sortedProducts = sortState.key ? sortRows(withMargin, sortState.key, sortState.direction) : withMargin;
-  renderProductsPage(container, { products: sortedProducts, recipesById, sortState });
+  const sortedProducts = sortState.key ? sortRows(withMargin(displayedProducts), sortState.key, sortState.direction) : withMargin(displayedProducts);
+  renderProductsPage(container, { products: sortedProducts, recipesById, sortState, searchTerm });
   bindEvents(container, displayedProducts, recipes, allProducts);
+  bindTableSorting(container, {
+    currentSort: sortState,
+    onSort: (key, direction) => {
+      sortState = { key, direction };
+      paint(container, displayedProducts, recipes, allProducts);
+    },
+  });
+}
+
+/**
+ * Actualiza SOLO la región de la tabla (no el buscador ni el resto de la
+ * página) — se usa mientras se escribe en el buscador, para no destruir el
+ * input y hacerle perder el foco en cada tecleo (ver dataTable.js).
+ */
+function paintTable(container, displayedProducts, recipes, allProducts) {
+  const recipesById = new Map(recipes.map((r) => [r.id, r]));
+  const sortedProducts = sortState.key ? sortRows(withMargin(displayedProducts), sortState.key, sortState.direction) : withMargin(displayedProducts);
+  const region = container.querySelector('#products-table-region');
+  if (region) region.innerHTML = renderProductsTable({ products: sortedProducts, recipesById, sortState, searchTerm });
+  bindRowActions(container, displayedProducts, recipes, allProducts);
   bindTableSorting(container, {
     currentSort: sortState,
     onSort: (key, direction) => {
@@ -77,11 +102,16 @@ function bindEvents(container, currentProducts, recipes, allProducts) {
 
   container.querySelector('#product-search')
     ?.addEventListener('input', debounce((e) => {
-      const term = normalizeForSearch(e.target.value.trim());
+      searchTerm = e.target.value.trim();
+      const term = normalizeForSearch(searchTerm);
       const filtered = allProducts.filter((p) => normalizeForSearch(p.name).includes(term));
-      paint(container, filtered, recipes, allProducts);
+      paintTable(container, filtered, recipes, allProducts);
     }, 250));
 
+  bindRowActions(container, currentProducts, recipes, allProducts);
+}
+
+function bindRowActions(container, currentProducts, recipes, allProducts) {
   container.querySelectorAll('[data-action="edit"]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const product = currentProducts.find((p) => p.id === btn.dataset.id);
