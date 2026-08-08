@@ -67,7 +67,26 @@ export function openModal({ title, contentHtml, onMount, footerButtons = [] }) {
   backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
   modal.querySelector('[data-close]').addEventListener('click', close);
   footerButtons.forEach((btn, i) => {
-    modal.querySelector(`[data-btn-index="${i}"]`).addEventListener('click', () => btn.onClick(close));
+    modal.querySelector(`[data-btn-index="${i}"]`).addEventListener('click', async () => {
+      // Evita doble-envío: un doble-tap (muy común en pantallas táctiles) o un
+      // Enter repetido no debe poder disparar el guardado dos veces antes de
+      // que la primera llamada termine (podría crear un registro duplicado,
+      // por ejemplo una venta repetida que descuenta stock dos veces).
+      if (modal.dataset.submitting === 'true') return;
+      modal.dataset.submitting = 'true';
+      const allButtons = footerButtons.map((_, j) => modal.querySelector(`[data-btn-index="${j}"]`));
+      allButtons.forEach((el) => { el.disabled = true; });
+      try {
+        await btn.onClick(close);
+      } finally {
+        // Si onClick ya cerró el modal, el backdrop no está más en el DOM —
+        // no hace falta (ni se puede) reactivar botones que ya no existen.
+        if (document.body.contains(backdrop)) {
+          modal.dataset.submitting = 'false';
+          allButtons.forEach((el) => { el.disabled = false; });
+        }
+      }
+    });
   });
   document.addEventListener('keydown', onKeydown);
 
