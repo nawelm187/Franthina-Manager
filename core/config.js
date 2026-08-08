@@ -6,7 +6,7 @@
 
 export const APP_CONFIG = Object.freeze({
   appName: 'Franthina Manager',
-  version: '0.18.0-mvp',
+  version: '0.19.0',
   storageAdapter: 'localStorage', // 'localStorage' | 'indexedDB' | futuros: 'supabase' | 'rest'
   storagePrefix: 'franthina:',
   defaultCurrency: 'ARS',
@@ -14,22 +14,31 @@ export const APP_CONFIG = Object.freeze({
 });
 
 export const ROUTES = Object.freeze({
-  DASHBOARD: '/',
-  PRODUCTS: '/productos',
-  PRODUCT_DETAIL: '/productos/:id',
-  INGREDIENTS: '/ingredientes',
-  INGREDIENT_DETAIL: '/ingredientes/:id',
-  RECIPES: '/recetas',
-  INVENTORY: '/inventario',
-  PRODUCTION: '/produccion',
-  CUSTOMERS: '/clientes',
-  SALES: '/ventas',
-  CASHBOX: '/caja',
-  ORDERS: '/pedidos',
-  SUPPLIERS: '/proveedores',
-  PURCHASES: '/compras',
-  REPORTS: '/reportes',
-  SETTINGS: '/configuracion',
+  // Tienda pública — la ve cualquier visitante, sin login.
+  STORE_HOME: '/',
+  STORE_CART: '/carrito',
+
+  // Administración — todo el sistema de gestión actual, ahora detrás de
+  // /admin. v0.19 es solo esta separación de rutas: la protección real con
+  // login llega en una versión futura (ver docs/ROADMAP si existe, o el
+  // historial de la conversación) — por ahora /admin es una URL más, no un
+  // área con acceso restringido de verdad.
+  DASHBOARD: '/admin',
+  PRODUCTS: '/admin/productos',
+  PRODUCT_DETAIL: '/admin/productos/:id',
+  INGREDIENTS: '/admin/ingredientes',
+  INGREDIENT_DETAIL: '/admin/ingredientes/:id',
+  RECIPES: '/admin/recetas',
+  INVENTORY: '/admin/inventario',
+  PRODUCTION: '/admin/produccion',
+  CUSTOMERS: '/admin/clientes',
+  SALES: '/admin/ventas',
+  CASHBOX: '/admin/caja',
+  ORDERS: '/admin/pedidos',
+  SUPPLIERS: '/admin/proveedores',
+  PURCHASES: '/admin/compras',
+  REPORTS: '/admin/reportes',
+  SETTINGS: '/admin/configuracion',
 });
 
 export const NAV_ITEMS = Object.freeze([

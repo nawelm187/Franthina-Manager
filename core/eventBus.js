@@ -67,6 +67,7 @@ export const EVENTS = Object.freeze({
   ROUTE_CHANGED: 'route:changed',
   TOAST_SHOW: 'toast:show',
   A11Y_PREFS_CHANGED: 'a11y:changed',
+  CART_CHANGED: 'cart:changed',
   BACKUP_EXPORTED: 'backup:exported',
   BACKUP_RESTORED: 'backup:restored',
 });
