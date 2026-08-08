@@ -6,7 +6,7 @@
  */
 
 import { recipeService } from './recipe.service.js';
-import { renderRecipesPage, recipeFormHtml, buildItemRowHtml } from './recipe.renderer.js';
+import { renderRecipesPage, renderRecipesTable, recipeFormHtml, buildItemRowHtml } from './recipe.renderer.js';
 import { createEmptyRecipe } from './recipe.model.js';
 import { openModal } from '../../components/modal.js';
 import { confirmAction } from '../../components/confirm.js';
@@ -18,6 +18,7 @@ import { productService } from '../products/product.service.js';
 import { compatibleUnitsFor, areCompatibleUnits } from '../../core/units.js';
 
 let sortState = { key: null, direction: 'asc' };
+let searchTerm = '';
 
 export async function render(_params, container) {
   container.innerHTML = '<div class="state-panel"><div class="skeleton" style="width:100%;height:240px;"></div></div>';
@@ -38,13 +39,32 @@ export async function render(_params, container) {
     allRecipes.map((r) => [r.id, recipeService.calculateCost(r, ingredients)])
   );
 
+  searchTerm = '';
   paint(container, allRecipes, ingredients, costsById, allRecipes);
 }
 
 function paint(container, displayedRecipes, ingredients, costsById, allRecipes) {
   const sortedRecipes = sortState.key ? sortRows(displayedRecipes, sortState.key, sortState.direction) : displayedRecipes;
-  renderRecipesPage(container, { recipes: sortedRecipes, costsById, sortState });
+  renderRecipesPage(container, { recipes: sortedRecipes, costsById, sortState, searchTerm });
   bindEvents(container, displayedRecipes, ingredients, allRecipes, costsById);
+  bindTableSorting(container, {
+    currentSort: sortState,
+    onSort: (key, direction) => {
+      sortState = { key, direction };
+      paint(container, displayedRecipes, ingredients, costsById, allRecipes);
+    },
+  });
+}
+
+/**
+ * Actualiza SOLO la región de la tabla — se usa mientras se escribe en el
+ * buscador, para no destruir el input y hacerle perder el foco en cada tecleo.
+ */
+function paintTable(container, displayedRecipes, ingredients, costsById, allRecipes) {
+  const sortedRecipes = sortState.key ? sortRows(displayedRecipes, sortState.key, sortState.direction) : displayedRecipes;
+  const region = container.querySelector('#recipes-table-region');
+  if (region) region.innerHTML = renderRecipesTable({ recipes: sortedRecipes, costsById, sortState, searchTerm });
+  bindRowActions(container, displayedRecipes, ingredients, allRecipes, costsById);
   bindTableSorting(container, {
     currentSort: sortState,
     onSort: (key, direction) => {
@@ -69,11 +89,16 @@ function bindEvents(container, recipes, ingredients, allRecipes, costsById) {
 
   container.querySelector('#recipe-search')
     ?.addEventListener('input', debounce((e) => {
-      const term = normalizeForSearch(e.target.value.trim());
+      searchTerm = e.target.value.trim();
+      const term = normalizeForSearch(searchTerm);
       const filtered = allRecipes.filter((r) => normalizeForSearch(r.name).includes(term));
-      paint(container, filtered, ingredients, costsById, allRecipes);
+      paintTable(container, filtered, ingredients, costsById, allRecipes);
     }, 250));
 
+  bindRowActions(container, recipes, ingredients, allRecipes, costsById);
+}
+
+function bindRowActions(container, recipes, ingredients, allRecipes, costsById) {
   container.querySelectorAll('[data-action="edit"]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const recipe = recipes.find((r) => r.id === btn.dataset.id);
